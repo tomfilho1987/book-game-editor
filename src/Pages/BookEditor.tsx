@@ -516,7 +516,7 @@ const BookEditor: React.FC = () => {
         <Toolbar />
         <Box sx={{ p: 2, mt: 0 }}>
           <Typography variant="h6">Capítulos</Typography>
-          <List component={"nav" as any} sx={{ maxHeight: '640px', overflow: 'auto' }} ref={chapterListRef}>
+          <List component={"nav" as any} sx={{ maxHeight: '580px', overflow: 'auto' }} ref={chapterListRef}>
             {chapters.map((ch) => {
               const isSelected = ch.id === selectedChapter?.id;
               return (
