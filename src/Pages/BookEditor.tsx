@@ -24,7 +24,8 @@ import { Choice } from "../Types/Choice";
 import { IChapterOption } from "../Interfaces/IChapterOption";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { IChoiceJSON } from "../Interfaces/JSON/IChoiceJSON ";
-import { IChapterDataJSON } from "../Interfaces/JSON/IChapterDataJSON ";
+import { IChapterDataJSON } from "../Interfaces/JSON/IChapterDataJSON";
+import { v4 as uuidv4 } from 'uuid'; // Importe a função para gerar UUIDs
 
 const drawerWidth = 280;
 
@@ -65,6 +66,64 @@ const BookEditor: React.FC = () => {
 
   const chapterListRef = useRef<HTMLDivElement>(null);
 
+  const [onStartHiddenStatus, setOnStartHiddenStatus] = useState<Record<number, Record<string, boolean>>>({});
+
+  const getOnStartHiddenStatus = (chapterId: number, key: string): boolean => {
+    return onStartHiddenStatus[chapterId]?.[key] || false;
+  };
+
+  const updateOnStartKey = (oldKey: string, newKey: string, value: number | string) => {
+    if (!selectedChapter || !selectedChapter.on_start) return;
+    const updatedOnStart = { ...selectedChapter.on_start };
+    delete updatedOnStart[oldKey];
+    updatedOnStart[newKey] = value;
+    handleChapterChange("on_start", updatedOnStart);
+  
+    // Atualiza o estado de oculto também se a chave mudar
+    setOnStartHiddenStatus(prevStatus => {
+      const chapterStatus = prevStatus[selectedChapter.id];
+      if (chapterStatus && chapterStatus[oldKey] !== undefined) {
+        const newChapterStatus = { ...chapterStatus };
+        newChapterStatus[newKey] = newChapterStatus[oldKey];
+        delete newChapterStatus[oldKey];
+        return { ...prevStatus, [selectedChapter.id]: newChapterStatus };
+      }
+      return prevStatus;
+    });
+  };
+
+  const updateOnStartValue = (key: string, newValue: number | string) => {
+    if (!selectedChapter || !selectedChapter.on_start) return;
+    const updatedOnStart = { ...selectedChapter.on_start, [key]: newValue };
+    handleChapterChange("on_start", updatedOnStart);
+  };
+
+ /**
+   * @function isOnStartHidden
+   * @description Verifica se um item específico do "On Start" está marcado como oculto.
+   * @param {string} key - A chave do item "On Start".
+   * @returns {boolean} - True se o item estiver marcado como oculto, false caso contrário.
+   */
+ const isOnStartHidden = (key: string): boolean => {
+  return onStartHiddenStatus[selectedChapter?.id || -1]?.[key] || false;
+};
+
+  /**
+ * @function handleOnStartHiddenChange
+ * @description Atualiza o estado de "oculto" de um item do "On Start".
+ * @param {string} key - A chave do item "On Start".
+ * @param {boolean} checked - O novo estado do checkbox (true para oculto, false para não oculto).
+ */
+  const handleOnStartHiddenChange = (key: string, checked: boolean) => {
+    if (!selectedChapter) return;
+    setOnStartHiddenStatus(prevStatus => ({
+      ...prevStatus,
+      [selectedChapter.id]: {
+        ...prevStatus[selectedChapter.id],
+        [key]: checked,
+      },
+    }));
+  };
   /**
    * @effect Atualiza o localStorage com os dados dos capítulos sempre que a lista de capítulos é alterada.
    */
@@ -100,6 +159,7 @@ const BookEditor: React.FC = () => {
   const addChoice = () => {
     if (!selectedChapter) return;
     const newChoice: Choice & { expanded: boolean } = {
+        id: uuidv4(),
         target: 0,
         text: "",
         expanded: true, // Inicializa o accordion como expandido
@@ -128,7 +188,7 @@ const BookEditor: React.FC = () => {
     if (!selectedChapter) return;
     const updatedChoices = [...selectedChapter.choices];
     updatedChoices[index] = newChoice;
-    handleChapterChange("choices", updatedChoices);
+    handleChapterChange("choices", updatedChoices); // Use handleChapterChange para atualizar o estado chapters
   };
 
   /**
@@ -139,8 +199,29 @@ const BookEditor: React.FC = () => {
   const addRequirementToChoice = (index: number) => {
     if (!selectedChapter) return;
     const choice = selectedChapter.choices[index];
-    const newReq = { ...choice.requirement, "": { value: 1, isCost: false } };
+    const newId = uuidv4();
+    const newReq = { ...choice.requirement, [newId]: { id: newId, key: "", value: "", isCost: false, isHidden: false } };
     updateChoice(index, { ...choice, requirement: newReq });
+  };
+
+  const updateRequirementKey = (
+    choiceIndex: number,
+    requirementId: string,
+    newKey: string
+  ) => {
+    const choice = selectedChapter?.choices[choiceIndex];
+    if (!choice || !choice.requirement) return;
+
+    const updatedReq = { ...choice.requirement };
+    if (updatedReq[requirementId]) {
+      updatedReq[requirementId] = {
+        ...updatedReq[requirementId],
+        key: newKey, // Atualiza a chave
+      };
+      const updatedChoices = [...selectedChapter.choices];
+      updatedChoices[choiceIndex] = { ...choice, requirement: updatedReq };
+      handleChapterChange("choices", updatedChoices);
+    }
   };
 
   /**
@@ -154,25 +235,26 @@ const BookEditor: React.FC = () => {
    */
   const updateRequirement = (
     choiceIndex: number,
-    keyName: string,
-    newKey: string | null,
+    requirementId: string, // Use o ID do requisito
     newValue: number | string,
-    isCost: boolean
+    isCost: boolean,
+    isHidden: boolean
   ) => {
     const choice = selectedChapter?.choices[choiceIndex];
     if (!choice || !choice.requirement) return;
-
-    const updatedReq: Record<string, { value: number | string; isCost: boolean }> = {};
-
-    Object.entries(choice.requirement).forEach(([key, req]) => {
-      if (key === keyName && newKey) {
-        updatedReq[newKey] = { value: newValue, isCost };
-      } else {
-        updatedReq[key] = req;
-      }
-    });
-
-    updateChoice(choiceIndex, { ...choice, requirement: updatedReq });
+  
+    const updatedReq = { ...choice.requirement };
+    if (updatedReq[requirementId]) {
+      updatedReq[requirementId] = {
+        ...updatedReq[requirementId],
+        value: newValue,
+        isCost,
+        isHidden,
+      };
+      const updatedChoices = [...selectedChapter.choices];
+      updatedChoices[choiceIndex] = { ...choice, requirement: updatedReq };
+      handleChapterChange("choices", updatedChoices);
+    }
   };
 
   /**
@@ -181,12 +263,13 @@ const BookEditor: React.FC = () => {
    * @param {number} choiceIndex - O índice da escolha.
    * @param {string} key - A chave do requisito/custo a ser removido.
    */
-  const removeRequirementFromChoice = (choiceIndex: number, key: string) => {
-    const choice = selectedChapter?.choices[choiceIndex];
-    if (!choice || !choice.requirement) return;
-    const updatedReq = { ...choice.requirement };
-    delete updatedReq[key];
-    updateChoice(choiceIndex, { ...choice, requirement: Object.keys(updatedReq).length > 0 ? updatedReq : undefined });
+  const removeRequirementFromChoice = (choiceIndex: number, requirementId: string) => {
+    if (!selectedChapter || !selectedChapter.choices[choiceIndex].requirement) return;
+    const updatedReq = { ...selectedChapter.choices[choiceIndex].requirement };
+    delete updatedReq[requirementId];
+    const updatedChoices = [...selectedChapter.choices];
+    updatedChoices[choiceIndex] = { ...selectedChapter.choices[choiceIndex], requirement: updatedReq };
+    handleChapterChange("choices", updatedChoices);
   };
 
   /**
@@ -271,7 +354,7 @@ const BookEditor: React.FC = () => {
     }
   };
 
-/**
+  /**
    * @function saveJsonFile
    * @description Salva os dados dos capítulos em um arquivo JSON.
    * @param {string} fileName - O nome do arquivo a ser salvo (opcional).
@@ -280,19 +363,35 @@ const BookEditor: React.FC = () => {
   const saveJsonFile = (fileName?: string) => {
     const jsonStructure = {
       chapters: chapters.reduce((acc, chapter) => {
+        const updatedOnStart: Record<string, number | string> = {};
+        if (chapter.on_start) {
+          Object.entries(chapter.on_start).forEach(([key, value]) => {
+            const isHidden = getOnStartHiddenStatus(chapter.id, key); // Função para obter o status 'oculto'
+            if (isHidden) {
+              updatedOnStart["#" + key] = value;
+            } else {
+              updatedOnStart[key] = value;
+            }
+          });
+        }
+
         acc[chapter.id] = {
           text: chapter.text,
           choices: chapter.choices.map((choice) => ({
             text: choice.text,
             targets: [String(choice.target)],
             requirement: choice.requirement
-              ? Object.entries(choice.requirement).reduce((reqAcc, [key, value]) => {
-                  reqAcc[key] = value.value;
+              ? Object.entries(choice.requirement).reduce((reqAcc, [requirementId, reqData]) => {
+                  let finalKey = reqData.key;
+                  if (reqData.isHidden) {
+                    finalKey = "#" + reqData.key;
+                  }
+                  reqAcc[finalKey] = reqData.value;
                   return reqAcc;
                 }, {} as Record<string, number | string>)
               : undefined,
-          })),
-          on_start: chapter.on_start,
+            })),
+          on_start: Object.keys(updatedOnStart).length > 0 ? updatedOnStart : undefined,
         };
         return acc;
       }, {} as Record<string, any>),
@@ -306,11 +405,9 @@ const BookEditor: React.FC = () => {
     link.href = URL.createObjectURL(blob);
 
     if (fileName) {
-      // Sobrescrever arquivo existente
       link.download = fileName;
     } else {
-      // Salvar como um novo arquivo
-      link.download = "livro_jogo.json"; // Nome padrão
+      link.download = "livro_jogo.json";
     }
 
     document.body.appendChild(link);
@@ -356,7 +453,7 @@ const BookEditor: React.FC = () => {
   const loadJsonFile = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
+  
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
@@ -369,16 +466,24 @@ const BookEditor: React.FC = () => {
               title: `Capítulo ${id}`,
               text: chapterData.text,
               choices: chapterData.choices.map((choiceJSON: IChoiceJSON) => ({
+                id: uuidv4(),
                 target: Number(choiceJSON.targets[0]),
                 text: choiceJSON.text,
                 requirement: choiceJSON.requirement
                   ? Object.entries(choiceJSON.requirement).reduce(
-                      (acc, [key, value]) => ({
-                        ...acc,
-                        [key]: { value, isCost: false }, // Assumindo isCost como false por padrão
-                      }),
-                      {} as Record<string, { value: number | string; isCost: boolean }>
-                    )
+                    (acc, [reqKey, reqData]) => { // 'reqKey' aqui é a chave original do requisito
+                      const newRequirementId = uuidv4();
+                      acc[newRequirementId] = {
+                        key: reqKey, // Use a chave original como 'key'
+                        value: reqData as number | string,
+                        isCost: false,
+                        isHidden: false,
+                        id: newRequirementId, // Se você ainda quiser manter um ID interno
+                      };
+                      return acc;
+                    },
+                    {} as Record<string, { key: string; value: number | string; isCost: boolean; isHidden: boolean; id?: string }>
+                  )
                   : undefined,
               })),
               on_start: chapterData.on_start,
@@ -515,16 +620,27 @@ const BookEditor: React.FC = () => {
                         Object.entries(selectedChapter.on_start).map(([key, value], index) => (
                           <Box key={`<span class="math-inline">\{key\}\-</span>{index}`} sx={{ display: "flex", alignItems: "center", mb: 1 }}>
                             <TextField
-                                label="Chave On Start"
-                                value={key}
-                                onChange={(e) => updateOnStart(key, e.target.value, value)}
-                                sx={{ mr: 1, width: "300px" }}
+                              label="Chave On Start"
+                              value={key}
+                              onChange={(e) => updateOnStartKey(key, e.target.value, value)}
+                              sx={{ mr: 1, width: "300px" }}
                             />
                             <TextField
-                                label="Valor"
-                                value={value}
-                                onChange={(e) => updateOnStart(key, key, e.target.value)}
-                                sx={{ mr: 1 }}
+                              label="Valor"
+                              value={value}
+                              onChange={(e) => updateOnStartValue(key, e.target.value)} // <---- CHAMADA AQUI
+                              sx={{ mr: 1 }}
+                            />
+                            <FormControlLabel
+                              control={
+                                <Checkbox
+                                  // Precisaremos de um estado para controlar isso por item
+                                  // Exemplo (você precisará adaptar):
+                                  checked={isOnStartHidden(key)}
+                                  onChange={(e) => handleOnStartHiddenChange(key, e.target.checked)}
+                                />
+                              }
+                              label="Ocultar"
                             />
                             <IconButton onClick={() => removeOnStart(key)}>
                                 <DeleteIcon color="error" />
@@ -597,27 +713,32 @@ const BookEditor: React.FC = () => {
                                 {/* Requisitos & Custos */}
                                 <Typography variant="subtitle1">Requisitos & Custos</Typography>
                                 {choice.requirement && 
-                                    Object.entries(choice.requirement).map(([key, req]) => (
-                                        <Box key={key} sx={{ display: "flex", alignItems: "center", mb: 1, mt: 1 }}>
-                                            <TextField
-                                                label="Recurso"
-                                                value={key}
-                                                sx={{ width: "300px", mr: 1 }}
-                                                onChange={(e) => updateRequirement(index, key, e.target.value, req.value, req.isCost)}
-                                            />
-                                            <TextField
-                                                label="Valor"
-                                                value={req.value}
-                                                sx={{ width: "100px", mr: 1 }}
-                                                onChange={(e) => updateRequirement(index, key, key, e.target.value, req.isCost)}
-                                            />
-                                            <FormControlLabel
-                                                control={<Checkbox checked={req.isCost} onChange={(e) => updateRequirement(index, key, key, req.value, e.target.checked)} />}
-                                                label="Custo" />
-                                            <IconButton onClick={() => removeRequirementFromChoice(index, key)}>
-                                                <DeleteIcon color="error" />
-                                            </IconButton>
-                                        </Box>
+                                    Object.entries(choice.requirement).map(([id, req]) => (
+                                      <Box key={id} sx={{ display: "flex", alignItems: "center", mb: 1, mt: 1 }}>
+                                        <TextField
+                                          label="Recurso"
+                                          value={req.key}
+                                          sx={{ width: "300px", mr: 1 }}
+                                          onChange={(e) => updateRequirementKey(index, id, e.target.value)}
+                                        />
+                                        <TextField
+                                          label="Valor"
+                                          value={req.value}
+                                          sx={{ width: "100px", mr: 1 }}
+                                          onChange={(e) => updateRequirement(index, id, e.target.value, req.isCost, req.isHidden)}
+                                        />
+                                        <FormControlLabel
+                                          control={<Checkbox checked={req.isCost} onChange={(e) => updateRequirement(index, id, req.value, e.target.checked, req.isHidden)} />}
+                                          label="Custo"
+                                        />
+                                        <FormControlLabel
+                                          control={<Checkbox checked={req.isHidden} onChange={(e) => updateRequirement(index, id, req.value, req.isCost, e.target.checked)} />}
+                                          label="Ocultar"
+                                        />
+                                        <IconButton onClick={() => removeRequirementFromChoice(index, id)}> {/* Use o ID para remover */}
+                                          <DeleteIcon color="error" />
+                                        </IconButton>
+                                      </Box>
                                     ))
                                 }
                                 <Button variant="outlined" onClick={() => addRequirementToChoice(index)}>
