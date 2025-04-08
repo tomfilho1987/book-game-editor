@@ -9,11 +9,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Box, Button, Checkbox, Divider, Drawer, IconButton, FormControlLabel,
     List, ListItem, ListItemButton, ListItemText, Tab, Tabs, TextField, Toolbar, Typography,
     Autocomplete, createFilterOptions, Accordion, AccordionSummary, AccordionDetails,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogContentText,
-    DialogTitle } from "@mui/material";
+    Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SaveIcon from "@mui/icons-material/Save";
 import AddIcon from "@mui/icons-material/Add";
@@ -25,7 +21,7 @@ import { IChapterOption } from "../Interfaces/IChapterOption";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { IChoiceJSON } from "../Interfaces/JSON/IChoiceJSON ";
 import { IChapterDataJSON } from "../Interfaces/JSON/IChapterDataJSON";
-import { v4 as uuidv4 } from 'uuid'; // Importe a função para gerar UUIDs
+import { v4 as uuidv4 } from 'uuid';
 
 const drawerWidth = 280;
 
@@ -61,8 +57,6 @@ const BookEditor: React.FC = () => {
   const [loadedFileName, setLoadedFileName] = useState<string | null>(null);
   /** Estado para controlar a abertura do diálogo de salvar. */
   const [openDialog, setOpenDialog] = useState(false);
-  /** Estado para indicar se a opção de sobrescrever foi selecionada. */
-  const [overwriteOption, setOverwriteOption] = useState(false);
 
   const chapterListRef = useRef<HTMLDivElement>(null);
 
@@ -416,19 +410,6 @@ const BookEditor: React.FC = () => {
   };
 
   /**
-   * @function generateJsonFile
-   * @description Gera e baixa o arquivo JSON com os dados dos capítulos.
-   * Exibe um diálogo com opções de sobrescrever ou salvar como se um arquivo foi carregado.
-   */
-  const generateJsonFile = () => {
-    if (loadedFileName) {
-      setOpenDialog(true);
-    } else {
-      saveJsonFile();
-    }
-  };
-
-  /**
    * @constant filterOptions
    * @description Configura as opções de filtragem para o Autocomplete.
    */
@@ -532,10 +513,10 @@ const BookEditor: React.FC = () => {
                 <ListItem key={ch.id} disablePadding>
                   <ListItemButton
                     onClick={() => setSelectedChapter(ch)}
-                    selected={isSelected} // Define o item como "selecionado"
+                    selected={isSelected}
                     sx={{
-                      bgcolor: isSelected ? "#ddd" : "transparent", // Cor de fundo ao selecionar
-                      "&:hover": { bgcolor: "#ccc" }, // Melhora o hover
+                      bgcolor: isSelected ? "#ddd" : "transparent",
+                      "&:hover": { bgcolor: "#ccc" },
                     }}
                   >
                     <ListItemText primary={ch.title} />
@@ -628,14 +609,12 @@ const BookEditor: React.FC = () => {
                             <TextField
                               label="Valor"
                               value={value}
-                              onChange={(e) => updateOnStartValue(key, e.target.value)} // <---- CHAMADA AQUI
+                              onChange={(e) => updateOnStartValue(key, e.target.value)}
                               sx={{ mr: 1 }}
                             />
                             <FormControlLabel
                               control={
                                 <Checkbox
-                                  // Precisaremos de um estado para controlar isso por item
-                                  // Exemplo (você precisará adaptar):
                                   checked={isOnStartHidden(key)}
                                   onChange={(e) => handleOnStartHiddenChange(key, e.target.checked)}
                                 />
