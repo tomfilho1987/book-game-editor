@@ -152,13 +152,20 @@ const BookEditor: React.FC = () => {
    */
   const addChoice = () => {
     if (!selectedChapter) return;
+
+    // Fecha todos os accordions existentes
+    const updatedChoices = selectedChapter.choices.map(choice => ({
+      ...choice,
+      expanded: false,
+    }));
+
     const newChoice: Choice & { expanded: boolean } = {
         id: uuidv4(),
         target: 0,
         text: "",
         expanded: true, // Inicializa o accordion como expandido
     };
-    handleChapterChange("choices", [...selectedChapter.choices, newChoice]);
+    handleChapterChange("choices", [...updatedChoices, newChoice]);
   };
 
   /**
@@ -602,11 +609,12 @@ const BookEditor: React.FC = () => {
               <Tab label="Escolhas" />
             </Tabs>
 
-            {/* Conteúdo das Abas */}
+            {/* Aba On Start */}
             {tabIndex === 0 && (
-                /* Seção para múltiplos "on_start" */
                 <Box sx={{ mt: 3 }}>
-                    <Typography variant="h6">On Start</Typography>
+                    <Typography variant="h6" sx={{ mt: 2 }}>
+                      On Start
+                    </Typography>
                     {selectedChapter.on_start && (
                         Object.entries(selectedChapter.on_start).map(([key, value], index) => (
                           <Box key={`<span class="math-inline">\{key\}\-</span>{index}`} sx={{ display: "flex", alignItems: "center", mb: 1 }}>
@@ -642,106 +650,106 @@ const BookEditor: React.FC = () => {
                     </Button>
                 </Box>
             )}
+            {/* Aba Escolhas */}
             {tabIndex === 1 && (
-                <Box sx={{ mt: 3 }}>
-                    <Typography variant="h6" sx={{ mt: 3 }}>
-                        Escolhas
-                    </Typography>
-                    {selectedChapter.choices.map((choice, index) => (
-                      <Box>
-                        <Accordion
-                            key={index}
-                            expanded={choice.expanded}
-                            onChange={() => {
-                                const updatedChoices = [...selectedChapter.choices];
-                                updatedChoices[index].expanded = !updatedChoices[index].expanded;
-                                handleChapterChange("choices", updatedChoices);
-                            }}
-                            sx={{ mb: 2 }}
-                        >
-                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                <Typography>Escolha {index + 1}</Typography>
-                            </AccordionSummary>
-                            <AccordionDetails>
-                                <Box sx={{ display: "flex", alignItems: "center", mb: 1, mt: 1 }}>
-                                    <TextField
-                                        label="Texto da Escolha"
-                                        value={choice.text}
-                                        onChange={(e) =>
-                                            updateChoice(index, { ...choice, text: e.target.value })
-                                        }
-                                        fullWidth
-                                        sx={{ width: "60%",mr: 1 }}
-                                    />
-                                    <Autocomplete
-                                        options={chapters
-                                            .filter((chapter) => chapter.id !== selectedChapter?.id)
-                                            .map((chapter) => ({
-                                                id: chapter.id,
-                                                title: chapter.title,
-                                            }))}
-                                        getOptionLabel={(option: IChapterOption) => option.title}
-                                        value={chapters.find((chapter) => chapter.id === choice.target) || null}
-                                        onChange={(_, newValue) => {
-                                            updateChoice(index, {
-                                                ...choice,
-                                                target: newValue ? newValue.id : 0,
-                                            });
-                                        }}
-                                        renderInput={(params) => <TextField {...params} label="Destino" />}
-                                        sx={{ width: "40%", mr: 1 }}
-                                        filterOptions={(options, params): IChapterOption[] => {
-                                            const filtered = filterOptions(options, params);
-                                            return params.inputValue.length > 2 ? filtered : [];
-                                        }}
-                                    />
-                                    <IconButton onClick={() => removeChoice(index)}>
+              <Box sx={{ mt: 3 }}>
+                  <Typography variant="h6" sx={{ mt: 2 }}>
+                      Escolhas
+                  </Typography>
+                  {selectedChapter.choices.map((choice, index) => (
+                    <Box>
+                      <Accordion
+                          key={index}
+                          expanded={choice.expanded}
+                          onChange={() => {
+                              const updatedChoices = [...selectedChapter.choices];
+                              updatedChoices[index].expanded = !updatedChoices[index].expanded;
+                              handleChapterChange("choices", updatedChoices);
+                          }}
+                          sx={{ mb: 2 }}
+                      >
+                          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                              <Typography>Escolha {index + 1}</Typography>
+                          </AccordionSummary>
+                          <AccordionDetails>
+                              <Box sx={{ display: "flex", alignItems: "center", mb: 1, mt: 1 }}>
+                                  <TextField
+                                      label="Texto da Escolha"
+                                      value={choice.text}
+                                      onChange={(e) =>
+                                          updateChoice(index, { ...choice, text: e.target.value })
+                                      }
+                                      fullWidth
+                                      sx={{ width: "60%",mr: 1 }}
+                                  />
+                                  <Autocomplete
+                                      options={chapters
+                                          .filter((chapter) => chapter.id !== selectedChapter?.id)
+                                          .map((chapter) => ({
+                                              id: chapter.id,
+                                              title: chapter.title,
+                                          }))}
+                                      getOptionLabel={(option: IChapterOption) => option.title}
+                                      value={chapters.find((chapter) => chapter.id === choice.target) || null}
+                                      onChange={(_, newValue) => {
+                                          updateChoice(index, {
+                                              ...choice,
+                                              target: newValue ? newValue.id : 0,
+                                          });
+                                      }}
+                                      renderInput={(params) => <TextField {...params} label="Destino" />}
+                                      sx={{ width: "40%", mr: 1 }}
+                                      filterOptions={(options, params): IChapterOption[] => {
+                                          const filtered = filterOptions(options, params);
+                                          return params.inputValue.length > 2 ? filtered : [];
+                                      }}
+                                  />
+                                  <IconButton onClick={() => removeChoice(index)}>
+                                      <DeleteIcon color="error" />
+                                  </IconButton>
+                              </Box>
+                              {/* Requisitos & Custos */}
+                              <Typography variant="subtitle1">Requisitos & Custos</Typography>
+                              {choice.requirement && 
+                                  Object.entries(choice.requirement).map(([id, req]) => (
+                                    <Box key={id} sx={{ display: "flex", alignItems: "center", mb: 1, mt: 1 }}>
+                                      <TextField
+                                        label="Recurso"
+                                        value={req.key}
+                                        sx={{ width: "300px", mr: 1 }}
+                                        onChange={(e) => updateRequirementKey(index, id, e.target.value)}
+                                      />
+                                      <TextField
+                                        label="Valor"
+                                        value={req.value}
+                                        sx={{ width: "100px", mr: 1 }}
+                                        onChange={(e) => updateRequirement(index, id, e.target.value, req.isCost, req.isHidden)}
+                                      />
+                                      <FormControlLabel
+                                        control={<Checkbox checked={req.isCost} onChange={(e) => updateRequirement(index, id, req.value, e.target.checked, req.isHidden)} />}
+                                        label="Custo"
+                                      />
+                                      <FormControlLabel
+                                        control={<Checkbox checked={req.isHidden} onChange={(e) => updateRequirement(index, id, req.value, req.isCost, e.target.checked)} />}
+                                        label="Ocultar"
+                                      />
+                                      <IconButton onClick={() => removeRequirementFromChoice(index, id)}> {/* Use o ID para remover */}
                                         <DeleteIcon color="error" />
-                                    </IconButton>
-                                </Box>
-                                {/* Requisitos & Custos */}
-                                <Typography variant="subtitle1">Requisitos & Custos</Typography>
-                                {choice.requirement && 
-                                    Object.entries(choice.requirement).map(([id, req]) => (
-                                      <Box key={id} sx={{ display: "flex", alignItems: "center", mb: 1, mt: 1 }}>
-                                        <TextField
-                                          label="Recurso"
-                                          value={req.key}
-                                          sx={{ width: "300px", mr: 1 }}
-                                          onChange={(e) => updateRequirementKey(index, id, e.target.value)}
-                                        />
-                                        <TextField
-                                          label="Valor"
-                                          value={req.value}
-                                          sx={{ width: "100px", mr: 1 }}
-                                          onChange={(e) => updateRequirement(index, id, e.target.value, req.isCost, req.isHidden)}
-                                        />
-                                        <FormControlLabel
-                                          control={<Checkbox checked={req.isCost} onChange={(e) => updateRequirement(index, id, req.value, e.target.checked, req.isHidden)} />}
-                                          label="Custo"
-                                        />
-                                        <FormControlLabel
-                                          control={<Checkbox checked={req.isHidden} onChange={(e) => updateRequirement(index, id, req.value, req.isCost, e.target.checked)} />}
-                                          label="Ocultar"
-                                        />
-                                        <IconButton onClick={() => removeRequirementFromChoice(index, id)}> {/* Use o ID para remover */}
-                                          <DeleteIcon color="error" />
-                                        </IconButton>
-                                      </Box>
-                                    ))
-                                }
-                                <Button variant="outlined" onClick={() => addRequirementToChoice(index)}>
-                                    ➕ Adicionar Recurso
-                                </Button>
-                            </AccordionDetails>
-                        </Accordion>
-                      </Box>
-                    ))}
-                    <Button variant="outlined" onClick={addChoice} sx={{ mt: 2 }}>
-                    ➕ Adicionar Escolha
-                    </Button>
-                </Box>
-                
+                                      </IconButton>
+                                    </Box>
+                                  ))
+                              }
+                              <Button variant="outlined" onClick={() => addRequirementToChoice(index)}>
+                                  ➕ Adicionar Recurso
+                              </Button>
+                          </AccordionDetails>
+                      </Accordion>
+                    </Box>
+                  ))}
+                  <Button variant="outlined" onClick={addChoice} sx={{ mt: 2 }}>
+                  ➕ Adicionar Escolha
+                  </Button>
+              </Box>
             )}            
           </>
         ) : (
