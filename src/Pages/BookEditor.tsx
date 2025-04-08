@@ -360,7 +360,7 @@ const BookEditor: React.FC = () => {
         const updatedOnStart: Record<string, number | string> = {};
         if (chapter.on_start) {
           Object.entries(chapter.on_start).forEach(([key, value]) => {
-            const isHidden = getOnStartHiddenStatus(chapter.id, key); // Função para obter o status 'oculto'
+            const isHidden = getOnStartHiddenStatus(chapter.id, key);
             if (isHidden) {
               updatedOnStart["#" + key] = value;
             } else {
@@ -369,22 +369,32 @@ const BookEditor: React.FC = () => {
           });
         }
 
-        acc[chapter.id] = {
-          text: chapter.text,
-          choices: chapter.choices.map((choice) => ({
+        const choicesJSON = chapter.choices.map((choice) => {
+          const requirements: Record<string, number | string> = {};
+          const costs: Record<string, number | string> = {};
+
+          if (choice.requirement) {
+            Object.entries(choice.requirement).forEach(([requirementId, reqData]) => {
+              const finalKey = reqData.isHidden ? "#" + reqData.key : reqData.key;
+              if (reqData.isCost) {
+                costs[finalKey] = reqData.value;
+              } else {
+                requirements[finalKey] = reqData.value;
+              }
+            });
+          }
+
+          return {
             text: choice.text,
             targets: [String(choice.target)],
-            requirement: choice.requirement
-              ? Object.entries(choice.requirement).reduce((reqAcc, [requirementId, reqData]) => {
-                  let finalKey = reqData.key;
-                  if (reqData.isHidden) {
-                    finalKey = "#" + reqData.key;
-                  }
-                  reqAcc[finalKey] = reqData.value;
-                  return reqAcc;
-                }, {} as Record<string, number | string>)
-              : undefined,
-            })),
+            ...(Object.keys(requirements).length > 0 && { requirement: requirements }),
+            ...(Object.keys(costs).length > 0 && { cost: costs }),
+          };
+        });
+
+        acc[chapter.id] = {
+          text: chapter.text,
+          choices: choicesJSON,
           on_start: Object.keys(updatedOnStart).length > 0 ? updatedOnStart : undefined,
         };
         return acc;
