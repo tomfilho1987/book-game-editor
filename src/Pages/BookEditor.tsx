@@ -556,7 +556,7 @@ const BookEditor: React.FC = () => {
             </Button>
             <Divider sx={{ my: 2 }} />
             <Button variant="outlined" fullWidth onClick={clearHistory} startIcon={<AddIcon />}>
-              Novo
+              Limpar
             </Button>
             <Divider sx={{ my: 2 }} />
             <input
