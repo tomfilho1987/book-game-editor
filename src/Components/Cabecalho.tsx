@@ -11,7 +11,7 @@ export function Cabecalho(){
                     </Typography>
 
                     <Button color="inherit" component={Link} to="/">Criar História</Button>
-                    <Button color="inherit" component={Link} to="/game-setup">Configurar Jogo</Button> {/* Novo botão */}
+                    {/* <Button color="inherit" component={Link} to="/game-setup">Configurar Jogo</Button> Novo botão */}
                 </Toolbar>
             </AppBar>
             <Outlet />

@@ -19,7 +19,7 @@ export function Router(){
         <Routes>
             <Route element={<Cabecalho />}>
                 <Route path="/" element={<BookEditor />} />
-                <Route path="/game-setup" element={<GameSetup />} />
+                {/* <Route path="/game-setup" element={<GameSetup />} /> */}
             </Route>
         </Routes>
     );

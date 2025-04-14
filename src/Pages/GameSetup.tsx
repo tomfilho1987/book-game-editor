@@ -3,10 +3,11 @@
  * @description Componente para configurar os recursos padrão e as condições do jogo.
  * @author [Seu Nome]
  * @date [Data de Criação]
- * @version 1.0
+ * @version 4.0 (adição de recurso com campos sempre visíveis)
  */
 import React, { useState } from 'react';
-import { Box, TextField, Button, Typography } from '@mui/material';
+import { Box, TextField, Button, Typography, IconButton } from '@mui/material';
+import { Delete as DeleteIcon } from '@mui/icons-material';
 import { IGameConfig } from '../Interfaces/IGameConfig';
 
 /**
@@ -25,16 +26,81 @@ const GameSetup: React.FC = () => {
     });
 
     /**
-     * @function handleResourceChange
+     * @state newResource
+     * @description Estado para armazenar os dados do novo recurso a ser adicionado.
+     */
+    const [newResource, setNewResource] = useState<{ key: string; value: number }>({ key: '', value: 0 });
+
+    /**
+     * @state newCondition
+     * @description Estado para armazenar os dados da nova condição a ser adicionada.
+     */
+    const [newCondition, setNewCondition] = useState<{ key: string; min: number; trigger: string }>({ key: '', min: 0, trigger: '' });
+
+    /**
+     * @function handleResourceValueChange
      * @description Atualiza o valor de um recurso padrão na configuração.
      * @param {string} key - A chave do recurso.
      * @param {number} value - O novo valor do recurso.
      */
-    const handleResourceChange = (key: string, value: number) => {
+    const handleResourceValueChange = (key: string, value: number) => {
         setConfig({
             ...config,
             default_resources: { ...config.default_resources, [key]: value },
         });
+    };
+
+    /**
+     * @function handleResourceKeyChange
+     * @description Atualiza a chave de um recurso padrão na configuração.
+     * @param {string} oldKey - A chave antiga do recurso.
+     * @param {string} newKey - A nova chave do recurso.
+     */
+    const handleResourceKeyChange = (oldKey: string, newKey: string) => {
+        const { [oldKey]: value, ...restResources } = config.default_resources;
+        if (newKey.trim() && !restResources.hasOwnProperty(newKey.trim())) {
+            setConfig({
+                ...config,
+                default_resources: { ...restResources, [newKey.trim()]: value },
+            });
+        }
+    };
+
+    /**
+     * @function handleRemoveResource
+     * @description Remove um recurso da configuração.
+     * @param {string} key - A chave do recurso a ser removido.
+     */
+    const handleRemoveResource = (key: string) => {
+        const { [key]: removedKey, ...restResources } = config.default_resources;
+        setConfig({
+            ...config,
+            default_resources: restResources,
+        });
+    };
+
+    /**
+     * @function handleNewResourceChange
+     * @description Atualiza o estado do novo recurso conforme os campos são preenchidos.
+     * @param {React.ChangeEvent<HTMLInputElement>} event - O evento de mudança do input.
+     */
+    const handleNewResourceChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = event.target;
+        setNewResource({ ...newResource, [name]: name === 'value' ? Number(value) : value });
+    };
+
+    /**
+     * @function handleAddNewResource
+     * @description Adiciona o novo recurso à configuração.
+     */
+    const handleAddNewResource = () => {
+        if (newResource.key.trim() && !config.default_resources.hasOwnProperty(newResource.key.trim())) {
+            setConfig({
+                ...config,
+                default_resources: { ...config.default_resources, [newResource.key.trim()]: newResource.value },
+            });
+            setNewResource({ key: '', value: 0 });
+        }
     };
 
     /**
@@ -49,6 +115,46 @@ const GameSetup: React.FC = () => {
             ...config,
             conditions: { ...config.conditions, [key]: { min, trigger } },
         });
+    };
+
+    /**
+     * @function handleRemoveCondition
+     * @description Remove uma condição da configuração.
+     * @param {string} key - A chave da condição a ser removida.
+     */
+    const handleRemoveCondition = (key: string) => {
+        const { [key]: removedKey, ...restConditions } = config.conditions;
+        setConfig({
+            ...config,
+            conditions: restConditions,
+        });
+    };
+
+    /**
+     * @function handleNewConditionChange
+     * @description Atualiza o estado da nova condição conforme os campos são preenchidos.
+     * @param {React.ChangeEvent<HTMLInputElement>} event - O evento de mudança do input.
+     */
+    const handleNewConditionChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = event.target;
+        setNewCondition({
+            ...newCondition,
+            [name]: name === 'min' ? Number(value) : value,
+        });
+    };
+
+    /**
+     * @function handleAddNewCondition
+     * @description Adiciona a nova condição à configuração.
+     */
+    const handleAddNewCondition = () => {
+        if (newCondition.key.trim() && !config.conditions.hasOwnProperty(newCondition.key.trim())) {
+            setConfig({
+                ...config,
+                conditions: { ...config.conditions, [newCondition.key.trim()]: { min: newCondition.min, trigger: newCondition.trigger } },
+            });
+            setNewCondition({ key: '', min: 0, trigger: '' });
+        }
     };
 
     /**
@@ -74,29 +180,49 @@ const GameSetup: React.FC = () => {
             {Object.entries(config.default_resources).map(([key, value]) => (
                 <Box key={key} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <TextField
-                        label="Nome do Recurso"
+                        label="Recurso"
                         value={key}
-                        disabled
+                        onChange={(e) => handleResourceKeyChange(key, e.target.value)}
                         sx={{ mr: 1 }}
                     />
                     <TextField
-                        label="Valor Padrão"
+                        label="Valor"
                         type="number"
                         value={value}
-                        onChange={(e) => handleResourceChange(key, Number(e.target.value))}
+                        onChange={(e) => handleResourceValueChange(key, Number(e.target.value))}
                         sx={{ mr: 1 }}
                     />
+                    <IconButton onClick={() => handleRemoveResource(key)}>
+                        <DeleteIcon />
+                    </IconButton>
                 </Box>
             ))}
-            <Button variant="outlined" onClick={() => handleResourceChange(`recurso${Object.keys(config.default_resources).length + 1}`, 0)}>
-                ➕ Adicionar Recurso
-            </Button>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <TextField
+                    label="Recurso"
+                    name="key"
+                    value={newResource.key}
+                    onChange={handleNewResourceChange}
+                    sx={{ mr: 1 }}
+                />
+                <TextField
+                    label="Valor"
+                    name="value"
+                    type="number"
+                    value={newResource.value}
+                    onChange={handleNewResourceChange}
+                    sx={{ mr: 1 }}
+                />
+                <Button variant="outlined" onClick={handleAddNewResource}>
+                    ➕ Adicionar Recurso
+                </Button>
+            </Box>
 
             <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>Condições</Typography>
             {Object.entries(config.conditions).map(([key, condition]) => (
                 <Box key={key} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <TextField
-                        label="Nome da Condição"
+                        label="Condição"
                         value={key}
                         disabled
                         sx={{ mr: 1 }}
@@ -114,11 +240,38 @@ const GameSetup: React.FC = () => {
                         onChange={(e) => handleConditionChange(key, condition.min, e.target.value)}
                         sx={{ mr: 1 }}
                     />
+                    <IconButton onClick={() => handleRemoveCondition(key)}>
+                        <DeleteIcon />
+                    </IconButton>
                 </Box>
             ))}
-            <Button variant="outlined" onClick={() => handleConditionChange(`condicao${Object.keys(config.conditions).length + 1}`, 0, '')}>
-                ➕ Adicionar Condição
-            </Button>
+            <Box sx={{ mb: 1 }}>
+                <TextField
+                    label="Condição"
+                    name="key"
+                    value={newCondition.key}
+                    onChange={handleNewConditionChange}
+                    sx={{ mr: 1 }}
+                />
+                <TextField
+                    label="Valor Mínimo"
+                    name="min"
+                    type="number"
+                    value={newCondition.min}
+                    onChange={handleNewConditionChange}
+                    sx={{ mr: 1 }}
+                />
+                <TextField
+                    label="Gatilho"
+                    name="trigger"
+                    value={newCondition.trigger}
+                    onChange={handleNewConditionChange}
+                    sx={{ mr: 1 }}
+                />
+                <Button variant="outlined" onClick={handleAddNewCondition}>
+                    ➕ Adicionar Condição
+                </Button>
+            </Box>
 
             <Box>
                 <Button variant="contained" onClick={generateJsonFile} sx={{ mt: 3 }}>
