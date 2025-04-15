@@ -29,13 +29,13 @@ const GameSetup: React.FC = () => {
      * @state newResource
      * @description Estado para armazenar os dados do novo recurso a ser adicionado.
      */
-    const [newResource, setNewResource] = useState<{ key: string; value: number }>({ key: '', value: 0 });
+    const [newResource, setNewResource] = useState<{ key: string; value: string }>({ key: '', value: "" });
 
     /**
      * @state newCondition
      * @description Estado para armazenar os dados da nova condição a ser adicionada.
      */
-    const [newCondition, setNewCondition] = useState<{ key: string; min: number; trigger: string }>({ key: '', min: 0, trigger: '' });
+    const [newCondition, setNewCondition] = useState<{ key: string; min: string; trigger: string }>({ key: '', min: '', trigger: '' });
 
     /**
      * @function handleResourceValueChange
@@ -43,7 +43,7 @@ const GameSetup: React.FC = () => {
      * @param {string} key - A chave do recurso.
      * @param {number} value - O novo valor do recurso.
      */
-    const handleResourceValueChange = (key: string, value: number) => {
+    const handleResourceValueChange = (key: string, value: string) => {
         setConfig({
             ...config,
             default_resources: { ...config.default_resources, [key]: value },
@@ -99,7 +99,7 @@ const GameSetup: React.FC = () => {
                 ...config,
                 default_resources: { ...config.default_resources, [newResource.key.trim()]: newResource.value },
             });
-            setNewResource({ key: '', value: 0 });
+            setNewResource({ key: '', value: '' });
         }
     };
 
@@ -110,7 +110,7 @@ const GameSetup: React.FC = () => {
      * @param {number} min - O valor mínimo da condição.
      * @param {string} trigger - O gatilho da condição.
      */
-    const handleConditionChange = (key: string, min: number, trigger: string) => {
+    const handleConditionChange = (key: string, min: string, trigger: string) => {
         setConfig({
             ...config,
             conditions: { ...config.conditions, [key]: { min, trigger } },
@@ -153,7 +153,7 @@ const GameSetup: React.FC = () => {
                 ...config,
                 conditions: { ...config.conditions, [newCondition.key.trim()]: { min: newCondition.min, trigger: newCondition.trigger } },
             });
-            setNewCondition({ key: '', min: 0, trigger: '' });
+            setNewCondition({ key: '', min: '0', trigger: '' });
         }
     };
 
@@ -179,8 +179,8 @@ const GameSetup: React.FC = () => {
                 <Box key={key} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <TextField label="Recurso" value={key} sx={{ mr: 1 }}
                         onChange={(e) => handleResourceKeyChange(key, e.target.value)} />
-                    <TextField label="Valor" type="number" value={value} sx={{ mr: 1 }}
-                        onChange={(e) => handleResourceValueChange(key, Number(e.target.value))} />
+                    <TextField label="Valor" value={value} sx={{ mr: 1 }}
+                        onChange={(e) => handleResourceValueChange(key, e.target.value)} />
                     <IconButton onClick={() => handleRemoveResource(key)}>
                         <DeleteIcon />
                     </IconButton>
@@ -189,7 +189,7 @@ const GameSetup: React.FC = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <TextField label="Recurso" name="key" value={newResource.key} sx={{ mr: 1 }}
                     onChange={handleNewResourceChange} />
-                <TextField label="Valor" name="value" type="number" value={newResource.value} sx={{ mr: 1 }}
+                <TextField label="Valor" name="value" value={newResource.value} sx={{ mr: 1 }}
                     onChange={handleNewResourceChange} />
                 <Button variant="outlined" onClick={handleAddNewResource}>
                     ➕ Adicionar Recurso
@@ -200,8 +200,8 @@ const GameSetup: React.FC = () => {
             {Object.entries(config.conditions).map(([key, condition]) => (
                 <Box key={key} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <TextField label="Condição" value={key} disabled sx={{ mr: 1 }} />
-                    <TextField label="Valor Mínimo" type="number" value={condition.min} sx={{ mr: 1 }}
-                        onChange={(e) => handleConditionChange(key, Number(e.target.value), condition.trigger)} />
+                    <TextField label="Valor Mínimo" value={condition.min} sx={{ mr: 1 }}
+                        onChange={(e) => handleConditionChange(key, e.target.value, condition.trigger)} />
                     <TextField label="Gatilho" value={condition.trigger} sx={{ mr: 1 }}
                         onChange={(e) => handleConditionChange(key, condition.min, e.target.value)} />
                     <IconButton onClick={() => handleRemoveCondition(key)}>
@@ -212,7 +212,7 @@ const GameSetup: React.FC = () => {
             <Box sx={{ mb: 1 }}>
                 <TextField label="Condição" name="key" sx={{ mr: 1 }}
                     value={newCondition.key} onChange={handleNewConditionChange} />
-                <TextField label="Valor Mínimo" name="min" type="number" sx={{ mr: 1 }}
+                <TextField label="Valor Mínimo" name="min" sx={{ mr: 1 }}
                     value={newCondition.min} onChange={handleNewConditionChange} />
                 <TextField label="Gatilho" name="trigger" sx={{ mr: 1 }}
                     value={newCondition.trigger} onChange={handleNewConditionChange} />

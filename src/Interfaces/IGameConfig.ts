@@ -4,12 +4,12 @@
  */
 export interface IGameConfig {
     /** Recursos padrão do jogo. */
-    default_resources: Record<string, number>;
+    default_resources: Record<string, string>;
     /** Condições do jogo. */
     conditions: Record<string, ICondition>;
 }
 
 export interface ICondition {
-    min: number;
+    min: string;
     trigger: string;
   }

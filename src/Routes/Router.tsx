@@ -14,7 +14,6 @@ export function Router(){
         <Routes>
             <Route element={<Cabecalho />}>
                 <Route path="/" element={<Main />} />
-                {/* <Route path="/game-setup" element={<GameSetup />} /> */}
             </Route>
         </Routes>
     );

@@ -9,9 +9,6 @@ export function Cabecalho(){
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
                         Editor de Livro-Jogo
                     </Typography>
-
-                    <Button color="inherit" component={Link} to="/">Criar História</Button>
-                    {/* <Button color="inherit" component={Link} to="/game-setup">Configurar Jogo</Button> Novo botão */}
                 </Toolbar>
             </AppBar>
             <Outlet />
