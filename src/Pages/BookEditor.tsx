@@ -22,6 +22,8 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { IChoiceJSON } from "../Interfaces/JSON/IChoiceJSON ";
 import { IChapterDataJSON } from "../Interfaces/JSON/IChapterDataJSON";
 import { v4 as uuidv4 } from 'uuid';
+import { ICustomDialogAlert } from "../Interfaces/ICustomDialogAlert";
+import CustomAlertDialog from "../Components/CustomAlertDialog";
 
 const drawerWidth = 280;
 
@@ -59,6 +61,9 @@ const BookEditor: React.FC = () => {
   const [openDialog, setOpenDialog] = useState(false);
 
   const chapterListRef = useRef<HTMLDivElement>(null);
+
+  const [dialogAlert, setDialogAlert] = React.useState<ICustomDialogAlert>(
+    { open: false, title: 'Confirma Operação?', message: '', param: '' })
 
   const [onStartHiddenStatus, setOnStartHiddenStatus] = useState<Record<number, Record<string, boolean>>>({});
 
@@ -442,7 +447,16 @@ const BookEditor: React.FC = () => {
   const clearHistory = () => {
     setChapters([]);
     setSelectedChapter(null);
+    setDialogAlert({ ...dialogAlert, open: false })
   };
+
+  const confirmationDialog = () => {
+    setDialogAlert({
+      ...dialogAlert,
+      open: true,
+      message: `Deseja realmente limpar essa história?`
+    });
+  }
 
   /**
    * @function loadJsonFile
@@ -555,7 +569,7 @@ const BookEditor: React.FC = () => {
               Salvar
             </Button>
             <Divider sx={{ my: 2 }} />
-            <Button variant="outlined" fullWidth onClick={clearHistory} startIcon={<AddIcon />}>
+            <Button variant="outlined" fullWidth onClick={confirmationDialog} startIcon={<AddIcon />}>
               Limpar
             </Button>
             <Divider sx={{ my: 2 }} />
@@ -617,19 +631,7 @@ const BookEditor: React.FC = () => {
                     </Typography>
                     {selectedChapter.on_start && (
                         Object.entries(selectedChapter.on_start).map(([key, value], index) => (
-                          <Box key={`<span class="math-inline">\{key\}\-</span>{index}`} sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                            <TextField
-                              label="Chave On Start"
-                              value={key}
-                              onChange={(e) => updateOnStartKey(key, e.target.value, value)}
-                              sx={{ mr: 1, width: "300px" }}
-                            />
-                            <TextField
-                              label="Valor"
-                              value={value}
-                              onChange={(e) => updateOnStartValue(key, e.target.value)}
-                              sx={{ mr: 1 }}
-                            />
+                          <Box key={`<span class="math-inline">\{key\}\-</span>{index}`} sx={{ mb: 2 }}> {/* Adiciona margem inferior para separar os itens */}
                             <FormControlLabel
                               control={
                                 <Checkbox
@@ -639,9 +641,24 @@ const BookEditor: React.FC = () => {
                               }
                               label="Ocultar"
                             />
-                            <IconButton onClick={() => removeOnStart(key)}>
-                                <DeleteIcon color="error" />
-                            </IconButton>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <TextField
+                                label="Recurso"
+                                value={key}
+                                onChange={(e) => updateOnStartKey(key, e.target.value, value)}
+                                sx={{ mr: 1, width: "300px" }}
+                              />
+                              <TextField
+                                label="Valor"
+                                value={value}
+                                onChange={(e) => updateOnStartValue(key, e.target.value)}
+                                sx={{ mr: 1 }}
+                              />
+
+                              <IconButton onClick={() => removeOnStart(key)}>
+                                  <DeleteIcon color="error" />
+                              </IconButton>
+                            </Box>
                           </Box>
                       ))
                     )}
@@ -710,9 +727,14 @@ const BookEditor: React.FC = () => {
                               </Box>
                               {/* Requisitos & Custos */}
                               <Typography variant="subtitle1">Requisitos & Custos</Typography>
-                              {choice.requirement && 
-                                  Object.entries(choice.requirement).map(([id, req]) => (
-                                    <Box key={id} sx={{ display: "flex", alignItems: "center", mb: 1, mt: 1 }}>
+                              {choice.requirement &&
+                                Object.entries(choice.requirement).map(([id, req]) => (
+                                  <Box key={id} sx={{ mb: 2 }}> {/* Um Box para cada requisito */}
+                                    <FormControlLabel
+                                      control={<Checkbox checked={req.isHidden} onChange={(e) => updateRequirement(index, id, req.value, req.isCost, e.target.checked)} />}
+                                      label="Oculto"
+                                    />
+                                    <Box sx={{ display: "flex", alignItems: "center" }}> {/* Box para alinhar os outros elementos */}
                                       <TextField
                                         label="Recurso"
                                         value={req.key}
@@ -727,17 +749,14 @@ const BookEditor: React.FC = () => {
                                       />
                                       <FormControlLabel
                                         control={<Checkbox checked={req.isCost} onChange={(e) => updateRequirement(index, id, req.value, e.target.checked, req.isHidden)} />}
-                                        label="Custo"
+                                        label="Consumir"
                                       />
-                                      <FormControlLabel
-                                        control={<Checkbox checked={req.isHidden} onChange={(e) => updateRequirement(index, id, req.value, req.isCost, e.target.checked)} />}
-                                        label="Ocultar"
-                                      />
-                                      <IconButton onClick={() => removeRequirementFromChoice(index, id)}> {/* Use o ID para remover */}
+                                      <IconButton onClick={() => removeRequirementFromChoice(index, id)}>
                                         <DeleteIcon color="error" />
                                       </IconButton>
                                     </Box>
-                                  ))
+                                  </Box>
+                                ))
                               }
                               <Button variant="outlined" onClick={() => addRequirementToChoice(index)}>
                                   ➕ Adicionar Recurso
@@ -758,6 +777,15 @@ const BookEditor: React.FC = () => {
           </Typography>
         )}
       </Box>
+
+      <CustomAlertDialog
+          open={dialogAlert.open}
+          title={dialogAlert.title}
+          message={dialogAlert.message}
+          handleClickYes={clearHistory}
+          handleClickNo={() => { setDialogAlert({ ...dialogAlert, open: false }) }}
+          handleClickClose={() => { setDialogAlert({ ...dialogAlert, open: false }) }}
+      />
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
         <DialogTitle>Salvar Arquivo</DialogTitle>
