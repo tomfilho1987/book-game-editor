@@ -19,7 +19,7 @@ import { Chapter } from "../Types/Chapter";
 import { Choice } from "../Types/Choice";
 import { IChapterOption } from "../Interfaces/IChapterOption";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { IChoiceJSON } from "../Interfaces/JSON/IChoiceJSON ";
+import { IChoiceJSON } from "../Interfaces/JSON/IChoiceJSON";
 import { IChapterDataJSON } from "../Interfaces/JSON/IChapterDataJSON";
 import { v4 as uuidv4 } from 'uuid';
 import { ICustomDialogAlert } from "../Interfaces/ICustomDialogAlert";

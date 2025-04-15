@@ -3,7 +3,7 @@
  * @description Define a estrutura 'Chapter' do json a ser carregado
  */
 
-import { IChoiceJSON } from "./IChoiceJSON ";
+import { IChoiceJSON } from "./IChoiceJSON";
 
 export interface IChapterDataJSON {
     text: string;
