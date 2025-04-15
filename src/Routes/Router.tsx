@@ -6,19 +6,14 @@
  * @version 1.0
  */
 import { Route, Routes } from "react-router-dom";
-import BookEditor from "../Pages/BookEditor";
-import GameSetup from "../Pages/GameSetup";
-import { Chapter } from "../Types/Chapter";
 import Cabecalho from "../Components/Cabecalho";
+import Main from "../Pages/Main";
 
 export function Router(){
-    // Busca os dados do localStorage
-    const chapters: Chapter[] = JSON.parse(localStorage.getItem('bookData') || '[]');
-
     return (
         <Routes>
             <Route element={<Cabecalho />}>
-                <Route path="/" element={<BookEditor />} />
+                <Route path="/" element={<Main />} />
                 {/* <Route path="/game-setup" element={<GameSetup />} /> */}
             </Route>
         </Routes>

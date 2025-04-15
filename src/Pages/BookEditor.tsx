@@ -1,7 +1,7 @@
 /**
  * @file BookEditor.tsx
  * @description Componente responsável por editar os capítulos do livro-jogo.
- * @author [Seu Nome]
+ * @author Airton Filho
  * @date [Data de Criação]
  * @version 1.0
  */
@@ -9,7 +9,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { Box, Button, Checkbox, Divider, Drawer, IconButton, FormControlLabel,
     List, ListItem, ListItemButton, ListItemText, Tab, Tabs, TextField, Toolbar, Typography,
     Autocomplete, createFilterOptions, Accordion, AccordionSummary, AccordionDetails,
-    Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from "@mui/material";
+    Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, 
+    Grid2} from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SaveIcon from "@mui/icons-material/Save";
 import AddIcon from "@mui/icons-material/Add";
@@ -27,18 +28,17 @@ import CustomAlertDialog from "../Components/CustomAlertDialog";
 
 const drawerWidth = 280;
 
-const initialData: Chapter[] =
-  JSON.parse(localStorage.getItem("bookData") || "[]") || [
-    {
-      id: 1,
-      title: "Capítulo 1",
-      text: "Você está em uma floresta sombria...",
-      choices: [
-        { target: 2, text: "Seguir a trilha" },
-        { target: 3, text: "Entrar na caverna" },
-      ],
-    },
-  ];
+const initialData: Chapter[] = JSON.parse(localStorage.getItem("bookData") || "[]") || [
+  {
+    id: 1,
+    title: "Capítulo 1",
+    text: "Você está em uma floresta sombria...",
+    choices: [
+      { target: 2, text: "Seguir a trilha" },
+      { target: 3, text: "Entrar na caverna" },
+    ],
+  },
+];
 
 /**
  * @function BookEditor
@@ -53,8 +53,7 @@ const BookEditor: React.FC = () => {
     chapters.length > 0 ? chapters[0] : null
   );
   /** Estado para controlar a aba selecionada (On Start ou Escolhas). */
-  const [tabIndex, setTabIndex] = useState(0); // Controla as abas
-
+  const [tabFilha, setTabFilha] = useState(0); // Controla as abas
   /** Estado para armazenar o nome do arquivo JSON carregado. */
   const [loadedFileName, setLoadedFileName] = useState<string | null>(null);
   /** Estado para controlar a abertura do diálogo de salvar. */
@@ -123,6 +122,7 @@ const BookEditor: React.FC = () => {
       },
     }));
   };
+
   /**
    * @effect Atualiza o localStorage com os dados dos capítulos sempre que a lista de capítulos é alterada.
    */
@@ -339,7 +339,7 @@ const BookEditor: React.FC = () => {
     };
     setChapters([...chapters, newChapter]);
     setSelectedChapter(newChapter);
-    setTabIndex(0); // Garante que a aba "On Start" esteja ativa
+    setTabFilha(0); // Garante que a aba "On Start" esteja ativa
 
     // Rola para o final da lista
     if (chapterListRef.current) {
@@ -523,293 +523,248 @@ const BookEditor: React.FC = () => {
   };
 
   return (
-    <Box sx={{ display: "flex" }}>
-      {/* Sidebar com capítulos */}
-      <Drawer
-        variant="permanent"
-        sx={{
-          width: drawerWidth,
-          flexShrink: 0,
-          [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: "border-box" },
-          height: "100%", // Preenche a altura
-        }}
-      >
-        <Toolbar />
-        <Box sx={{ p: 2, mt: 0 }}>
-          <Typography variant="h6">Capítulos</Typography>
-          <List component={"nav" as any} sx={{ maxHeight: '580px', overflow: 'auto' }} ref={chapterListRef}>
-            {chapters.map((ch) => {
-              const isSelected = ch.id === selectedChapter?.id;
-              return (
-                <ListItem key={ch.id} disablePadding>
-                  <ListItemButton
-                    onClick={() => setSelectedChapter(ch)}
-                    selected={isSelected}
-                    sx={{
-                      bgcolor: isSelected ? "#ddd" : "transparent",
-                      "&:hover": { bgcolor: "#ccc" },
-                    }}
-                  >
-                    <ListItemText primary={ch.title} />
-                  </ListItemButton>
-                  <IconButton onClick={() => removeChapter(ch.id)} edge="end">
-                    <DeleteIcon color="error" />
-                  </IconButton>
-                </ListItem>
-              );
-            })}
-          </List>
-          <Divider sx={{ my: 2 }} />
-          <Box>
-            <Button onClick={addChapter} style={{ marginTop: "10px", width: "100%" }}>
-                ➕ Adicionar Capítulo
-            </Button>
+
+      <Grid2 container sx={{ minHeight: 1 }}>
+        <Grid2 size={2}>
+          <Box sx={{ p: 2 }}>
+            <Typography variant="h6">Capítulos</Typography>
+            <List component={"nav" as any} sx={{ maxHeight: '520px', overflow: 'auto' }} ref={chapterListRef}>
+              {chapters.map((ch) => {
+                const isSelected = ch.id === selectedChapter?.id;
+                return (
+                  <ListItem key={ch.id} disablePadding>
+                    <ListItemButton selected={isSelected} onClick={() => setSelectedChapter(ch)}
+                      sx={{ bgcolor: isSelected ? "#ddd" : "transparent", "&:hover": { bgcolor: "#ccc" } }} >
+                      <ListItemText primary={ch.title} />
+                    </ListItemButton>
+                    <IconButton onClick={() => removeChapter(ch.id)} edge="end">
+                      <DeleteIcon color="error" />
+                    </IconButton>
+                  </ListItem>
+                );
+              })}
+            </List>
             <Divider sx={{ my: 2 }} />
-            <Button variant="contained" fullWidth onClick={handleSaveClick} startIcon={<SaveIcon />}>
-              Salvar
-            </Button>
-            <Divider sx={{ my: 2 }} />
-            <Button variant="outlined" fullWidth onClick={confirmationDialog} startIcon={<AddIcon />}>
-              Limpar
-            </Button>
-            <Divider sx={{ my: 2 }} />
-            <input
-              type="file"
-              accept=".json"
-              onChange={loadJsonFile}
-              style={{ display: "none" }}
-              id="load-json-file"
-            />
-            <label htmlFor="load-json-file">
-              <Button variant="outlined" component="span" fullWidth startIcon={<FileUploadIcon />}>
-                Carregar
+            <Box>
+              <Button onClick={addChapter} style={{ marginTop: "10px", width: "100%" }}>
+                  ➕ Adicionar Capítulo
               </Button>
-            </label>
+              <Divider sx={{ my: 2 }} />
+              <Button variant="contained" fullWidth onClick={handleSaveClick} startIcon={<SaveIcon />}>
+                Salvar
+              </Button>
+              <Divider sx={{ my: 2 }} />
+              <Button variant="outlined" fullWidth onClick={confirmationDialog} startIcon={<AddIcon />}>
+                Limpar
+              </Button>
+              <Divider sx={{ my: 2 }} />
+              <input type="file" accept=".json" onChange={loadJsonFile} style={{ display: "none" }} id="load-json-file" />
+              <label htmlFor="load-json-file">
+                <Button variant="outlined" component="span" fullWidth startIcon={<FileUploadIcon />}>
+                  Carregar
+                </Button>
+              </label>
+            </Box>
           </Box>
-        </Box>
-      </Drawer>
+        </Grid2>
+        <Divider orientation="vertical" variant="fullWidth" flexItem/>
+        <Grid2 size={"grow"}>
+          {/* Conteúdo principal */}
+          <Box component="main" sx={{ flexGrow: 1, bgcolor: "background.default", p: 3 }} >
 
-      {/* Conteúdo principal */}
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          bgcolor: "background.default",
-          p: 3,
-        }}
-      >
-        {selectedChapter ? (
-          <>
-            <TextField
-              label="Capítulo"
-              value={selectedChapter.title}
-              onChange={(e) => handleChapterChange("title", e.target.value)}
-              fullWidth
-              margin="normal"
-            />
-            <TextField
-              label="Texto do Capítulo"
-              value={selectedChapter.text}
-              onChange={(e) => handleChapterChange("text", e.target.value)}
-              fullWidth
-              margin="normal"
-              multiline
-              rows={4}
-            />
+            {selectedChapter ? (
+              <>
+                <TextField label="Capítulo" value={selectedChapter.title} fullWidth margin="normal"
+                  onChange={(e) => handleChapterChange("title", e.target.value)} />
+                <TextField label="Texto do Capítulo" value={selectedChapter.text} fullWidth margin="normal" multiline rows={4}
+                  onChange={(e) => handleChapterChange("text", e.target.value)} />
 
-            {/* Abas */}
-            <Tabs value={tabIndex} onChange={(_, newIndex) => setTabIndex(newIndex)} sx={{ mt: 2 }}>
-              <Tab label="On Start" />
-              <Tab label="Escolhas" />
-            </Tabs>
+                {/* Abas */}
+                <Tabs value={tabFilha} onChange={(_, newIndex) => setTabFilha(newIndex)} sx={{ mt: 2 }}>
+                  <Tab label="On Start" />
+                  <Tab label="Escolhas" />
+                </Tabs>
 
-            {/* Aba On Start */}
-            {tabIndex === 0 && (
-                <Box sx={{ mt: 3 }}>
-                    <Typography variant="h6" sx={{ mt: 2 }}>
-                      On Start
-                    </Typography>
-                    {selectedChapter.on_start && (
-                        Object.entries(selectedChapter.on_start).map(([key, value], index) => (
-                          <Box key={`<span class="math-inline">\{key\}\-</span>{index}`} sx={{ mb: 2 }}> {/* Adiciona margem inferior para separar os itens */}
-                            <FormControlLabel
-                              control={
-                                <Checkbox
-                                  checked={isOnStartHidden(key)}
-                                  onChange={(e) => handleOnStartHiddenChange(key, e.target.checked)}
+                {/* Aba On Start */}
+                {tabFilha === 0 && (
+                    <Box sx={{ mt: 3 }}>
+                        <Typography variant="h6" sx={{ mt: 2 }}>
+                          On Start
+                        </Typography>
+                        {selectedChapter.on_start && (
+                            Object.entries(selectedChapter.on_start).map(([key, value], index) => (
+                              <Box key={`<span class="math-inline">\{key\}\-</span>{index}`} sx={{ mb: 2 }}> {/* Adiciona margem inferior para separar os itens */}
+                                <FormControlLabel
+                                  control={
+                                    <Checkbox
+                                      checked={isOnStartHidden(key)}
+                                      onChange={(e) => handleOnStartHiddenChange(key, e.target.checked)}
+                                    />
+                                  }
+                                  label="Ocultar"
                                 />
-                              }
-                              label="Ocultar"
-                            />
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <TextField
-                                label="Recurso"
-                                value={key}
-                                onChange={(e) => updateOnStartKey(key, e.target.value, value)}
-                                sx={{ mr: 1, width: "300px" }}
-                              />
-                              <TextField
-                                label="Valor"
-                                value={value}
-                                onChange={(e) => updateOnStartValue(key, e.target.value)}
-                                sx={{ mr: 1 }}
-                              />
-
-                              <IconButton onClick={() => removeOnStart(key)}>
-                                  <DeleteIcon color="error" />
-                              </IconButton>
-                            </Box>
-                          </Box>
-                      ))
-                    )}
-                    <Button variant="outlined" sx={{ mt: 1 }} onClick={addOnStart}>
-                        ➕ Adicionar On Start
-                    </Button>
-                </Box>
-            )}
-            {/* Aba Escolhas */}
-            {tabIndex === 1 && (
-              <Box sx={{ mt: 3 }}>
-                  <Typography variant="h6" sx={{ mt: 2 }}>
-                      Escolhas
-                  </Typography>
-                  {selectedChapter.choices.map((choice, index) => (
-                    <Box>
-                      <Accordion
-                          key={index}
-                          expanded={choice.expanded}
-                          onChange={() => {
-                              const updatedChoices = [...selectedChapter.choices];
-                              updatedChoices[index].expanded = !updatedChoices[index].expanded;
-                              handleChapterChange("choices", updatedChoices);
-                          }}
-                          sx={{ mb: 2 }}
-                      >
-                          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                              <Typography>Escolha {index + 1}</Typography>
-                          </AccordionSummary>
-                          <AccordionDetails>
-                              <Box sx={{ display: "flex", alignItems: "center", mb: 1, mt: 1 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                   <TextField
-                                      label="Texto da Escolha"
-                                      value={choice.text}
-                                      onChange={(e) =>
-                                          updateChoice(index, { ...choice, text: e.target.value })
-                                      }
-                                      fullWidth
-                                      sx={{ width: "60%",mr: 1 }}
+                                    label="Recurso"
+                                    value={key}
+                                    onChange={(e) => updateOnStartKey(key, e.target.value, value)}
+                                    sx={{ mr: 1, width: "300px" }}
                                   />
-                                  <Autocomplete
-                                      options={chapters
-                                          .filter((chapter) => chapter.id !== selectedChapter?.id)
-                                          .map((chapter) => ({
-                                              id: chapter.id,
-                                              title: chapter.title,
-                                          }))}
-                                      getOptionLabel={(option: IChapterOption) => option.title}
-                                      value={chapters.find((chapter) => chapter.id === choice.target) || null}
-                                      onChange={(_, newValue) => {
-                                          updateChoice(index, {
-                                              ...choice,
-                                              target: newValue ? newValue.id : 0,
-                                          });
-                                      }}
-                                      renderInput={(params) => <TextField {...params} label="Destino" />}
-                                      sx={{ width: "40%", mr: 1 }}
-                                      filterOptions={(options, params): IChapterOption[] => {
-                                          const filtered = filterOptions(options, params);
-                                          return params.inputValue.length > 2 ? filtered : [];
-                                      }}
+                                  <TextField
+                                    label="Valor"
+                                    value={value}
+                                    onChange={(e) => updateOnStartValue(key, e.target.value)}
+                                    sx={{ mr: 1 }}
                                   />
-                                  <IconButton onClick={() => removeChoice(index)}>
+
+                                  <IconButton onClick={() => removeOnStart(key)}>
                                       <DeleteIcon color="error" />
                                   </IconButton>
+                                </Box>
                               </Box>
-                              {/* Requisitos & Custos */}
-                              <Typography variant="subtitle1">Requisitos & Custos</Typography>
-                              {choice.requirement &&
-                                Object.entries(choice.requirement).map(([id, req]) => (
-                                  <Box key={id} sx={{ mb: 2 }}> {/* Um Box para cada requisito */}
-                                    <FormControlLabel
-                                      control={<Checkbox checked={req.isHidden} onChange={(e) => updateRequirement(index, id, req.value, req.isCost, e.target.checked)} />}
-                                      label="Oculto"
-                                    />
-                                    <Box sx={{ display: "flex", alignItems: "center" }}> {/* Box para alinhar os outros elementos */}
-                                      <TextField
-                                        label="Recurso"
-                                        value={req.key}
-                                        sx={{ width: "300px", mr: 1 }}
-                                        onChange={(e) => updateRequirementKey(index, id, e.target.value)}
-                                      />
-                                      <TextField
-                                        label="Valor"
-                                        value={req.value}
-                                        sx={{ width: "100px", mr: 1 }}
-                                        onChange={(e) => updateRequirement(index, id, e.target.value, req.isCost, req.isHidden)}
-                                      />
-                                      <FormControlLabel
-                                        control={<Checkbox checked={req.isCost} onChange={(e) => updateRequirement(index, id, req.value, e.target.checked, req.isHidden)} />}
-                                        label="Consumir"
-                                      />
-                                      <IconButton onClick={() => removeRequirementFromChoice(index, id)}>
-                                        <DeleteIcon color="error" />
-                                      </IconButton>
-                                    </Box>
-                                  </Box>
-                                ))
-                              }
-                              <Button variant="outlined" onClick={() => addRequirementToChoice(index)}>
-                                  ➕ Adicionar Recurso
-                              </Button>
-                          </AccordionDetails>
-                      </Accordion>
+                          ))
+                        )}
+                        <Button variant="outlined" sx={{ mt: 1 }} onClick={addOnStart}>
+                            ➕ Adicionar On Start
+                        </Button>
                     </Box>
-                  ))}
-                  <Button variant="outlined" onClick={addChoice} sx={{ mt: 2 }}>
-                  ➕ Adicionar Escolha
-                  </Button>
-              </Box>
-            )}            
-          </>
-        ) : (
-          <Typography variant="h5" align="center">
-            Adicione um capítulo para começar...
-          </Typography>
-        )}
-      </Box>
-
-      <CustomAlertDialog
-          open={dialogAlert.open}
-          title={dialogAlert.title}
-          message={dialogAlert.message}
-          handleClickYes={clearHistory}
-          handleClickNo={() => { setDialogAlert({ ...dialogAlert, open: false }) }}
-          handleClickClose={() => { setDialogAlert({ ...dialogAlert, open: false }) }}
-      />
-
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-        <DialogTitle>Salvar Arquivo</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {loadedFileName
-              ? `O arquivo original "${loadedFileName}" não será sobrescrito. Um novo arquivo será baixado com o mesmo nome.`
-              : "Deseja salvar como um novo arquivo?"}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Cancelar</Button>
-          <Button
-            onClick={() => {
-              setOpenDialog(false);
-              saveJsonFile(loadedFileName || "livro_jogo.json");
-            }}
-            variant="contained"
-          >
-            Salvar
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+                )}
+                {/* Aba Escolhas */}
+                {tabFilha === 1 && (
+                  <Box sx={{ mt: 3 }}>
+                      <Typography variant="h6" sx={{ mt: 2 }}>
+                          Escolhas
+                      </Typography>
+                      {selectedChapter.choices.map((choice, index) => (
+                        <Box>
+                          <Accordion
+                              key={index}
+                              expanded={choice.expanded}
+                              onChange={() => {
+                                  const updatedChoices = [...selectedChapter.choices];
+                                  updatedChoices[index].expanded = !updatedChoices[index].expanded;
+                                  handleChapterChange("choices", updatedChoices);
+                              }}
+                              sx={{ mb: 2 }}
+                          >
+                              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                                  <Typography>Escolha {index + 1}</Typography>
+                              </AccordionSummary>
+                              <AccordionDetails>
+                                  <Box sx={{ display: "flex", alignItems: "center", mb: 1, mt: 1 }}>
+                                      <TextField
+                                          label="Texto da Escolha"
+                                          value={choice.text}
+                                          onChange={(e) =>
+                                              updateChoice(index, { ...choice, text: e.target.value })
+                                          }
+                                          fullWidth
+                                          sx={{ width: "60%",mr: 1 }}
+                                      />
+                                      <Autocomplete
+                                          options={chapters
+                                              .filter((chapter) => chapter.id !== selectedChapter?.id)
+                                              .map((chapter) => ({
+                                                  id: chapter.id,
+                                                  title: chapter.title,
+                                              }))}
+                                          getOptionLabel={(option: IChapterOption) => option.title}
+                                          value={chapters.find((chapter) => chapter.id === choice.target) || null}
+                                          onChange={(_, newValue) => {
+                                              updateChoice(index, {
+                                                  ...choice,
+                                                  target: newValue ? newValue.id : 0,
+                                              });
+                                          }}
+                                          renderInput={(params) => <TextField {...params} label="Destino" />}
+                                          sx={{ width: "40%", mr: 1 }}
+                                          filterOptions={(options, params): IChapterOption[] => {
+                                              const filtered = filterOptions(options, params);
+                                              return params.inputValue.length > 2 ? filtered : [];
+                                          }}
+                                      />
+                                      <IconButton onClick={() => removeChoice(index)}>
+                                          <DeleteIcon color="error" />
+                                      </IconButton>
+                                  </Box>
+                                  {/* Requisitos & Custos */}
+                                  <Typography variant="subtitle1">Requisitos & Custos</Typography>
+                                  {choice.requirement &&
+                                    Object.entries(choice.requirement).map(([id, req]) => (
+                                      <Box key={id} sx={{ mb: 2 }}> {/* Um Box para cada requisito */}
+                                        <FormControlLabel
+                                          control={<Checkbox checked={req.isHidden} onChange={(e) => updateRequirement(index, id, req.value, req.isCost, e.target.checked)} />}
+                                          label="Oculto"
+                                        />
+                                        <Box sx={{ display: "flex", alignItems: "center" }}> {/* Box para alinhar os outros elementos */}
+                                          <TextField
+                                            label="Recurso"
+                                            value={req.key}
+                                            sx={{ width: "300px", mr: 1 }}
+                                            onChange={(e) => updateRequirementKey(index, id, e.target.value)}
+                                          />
+                                          <TextField
+                                            label="Valor"
+                                            value={req.value}
+                                            sx={{ width: "100px", mr: 1 }}
+                                            onChange={(e) => updateRequirement(index, id, e.target.value, req.isCost, req.isHidden)}
+                                          />
+                                          <FormControlLabel
+                                            control={<Checkbox checked={req.isCost} onChange={(e) => updateRequirement(index, id, req.value, e.target.checked, req.isHidden)} />}
+                                            label="Consumir"
+                                          />
+                                          <IconButton onClick={() => removeRequirementFromChoice(index, id)}>
+                                            <DeleteIcon color="error" />
+                                          </IconButton>
+                                        </Box>
+                                      </Box>
+                                    ))
+                                  }
+                                  <Button variant="outlined" onClick={() => addRequirementToChoice(index)}>
+                                      ➕ Adicionar Recurso
+                                  </Button>
+                              </AccordionDetails>
+                          </Accordion>
+                        </Box>
+                      ))}
+                      <Button variant="outlined" onClick={addChoice} sx={{ mt: 2 }}>
+                      ➕ Adicionar Escolha
+                      </Button>
+                  </Box>
+                )}            
+              </>
+            ) : (
+              <Typography variant="h5" align="center">
+                Adicione um capítulo para começar...
+              </Typography>
+            )}
+          </Box>
+          <CustomAlertDialog open={dialogAlert.open} title={dialogAlert.title} message={dialogAlert.message} handleClickYes={clearHistory}
+              handleClickNo={() => { setDialogAlert({ ...dialogAlert, open: false }) }}
+              handleClickClose={() => { setDialogAlert({ ...dialogAlert, open: false }) }}
+          />
+          <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+            <DialogTitle>Salvar Arquivo</DialogTitle>
+            <DialogContent>
+              <DialogContentText>
+                {loadedFileName
+                  ? `O arquivo original "${loadedFileName}" não será sobrescrito. Um novo arquivo será baixado com o mesmo nome.`
+                  : "Deseja salvar como um novo arquivo?"}
+              </DialogContentText>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setOpenDialog(false)}>Cancelar</Button>
+              <Button variant="contained"
+                onClick={() => {
+                  setOpenDialog(false);
+                  saveJsonFile(loadedFileName || "livro_jogo.json");
+                }}>
+                Salvar
+              </Button>
+            </DialogActions>
+          </Dialog>
+        </Grid2>
+      </Grid2>
   );
 };
 

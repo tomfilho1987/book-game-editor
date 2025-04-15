@@ -1,7 +1,7 @@
 /**
  * @file GameSetup.tsx
  * @description Componente para configurar os recursos padrão e as condições do jogo.
- * @author [Seu Nome]
+ * @author Airton Filho
  * @date [Data de Criação]
  * @version 4.0 (adição de recurso com campos sempre visíveis)
  */
@@ -174,45 +174,23 @@ const GameSetup: React.FC = () => {
 
     return (
         <Box sx={{ p: 3 }}>
-            <Typography variant="h4" gutterBottom>Configuração do Jogo</Typography>
-
-            <Typography variant="h6" gutterBottom>Recursos Padrão</Typography>
+            <Typography variant="h6" gutterBottom>Recursos</Typography>
             {Object.entries(config.default_resources).map(([key, value]) => (
                 <Box key={key} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <TextField
-                        label="Recurso"
-                        value={key}
-                        onChange={(e) => handleResourceKeyChange(key, e.target.value)}
-                        sx={{ mr: 1 }}
-                    />
-                    <TextField
-                        label="Valor"
-                        type="number"
-                        value={value}
-                        onChange={(e) => handleResourceValueChange(key, Number(e.target.value))}
-                        sx={{ mr: 1 }}
-                    />
+                    <TextField label="Recurso" value={key} sx={{ mr: 1 }}
+                        onChange={(e) => handleResourceKeyChange(key, e.target.value)} />
+                    <TextField label="Valor" type="number" value={value} sx={{ mr: 1 }}
+                        onChange={(e) => handleResourceValueChange(key, Number(e.target.value))} />
                     <IconButton onClick={() => handleRemoveResource(key)}>
                         <DeleteIcon />
                     </IconButton>
                 </Box>
             ))}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <TextField
-                    label="Recurso"
-                    name="key"
-                    value={newResource.key}
-                    onChange={handleNewResourceChange}
-                    sx={{ mr: 1 }}
-                />
-                <TextField
-                    label="Valor"
-                    name="value"
-                    type="number"
-                    value={newResource.value}
-                    onChange={handleNewResourceChange}
-                    sx={{ mr: 1 }}
-                />
+                <TextField label="Recurso" name="key" value={newResource.key} sx={{ mr: 1 }}
+                    onChange={handleNewResourceChange} />
+                <TextField label="Valor" name="value" type="number" value={newResource.value} sx={{ mr: 1 }}
+                    onChange={handleNewResourceChange} />
                 <Button variant="outlined" onClick={handleAddNewResource}>
                     ➕ Adicionar Recurso
                 </Button>
@@ -221,58 +199,27 @@ const GameSetup: React.FC = () => {
             <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>Condições</Typography>
             {Object.entries(config.conditions).map(([key, condition]) => (
                 <Box key={key} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <TextField
-                        label="Condição"
-                        value={key}
-                        disabled
-                        sx={{ mr: 1 }}
-                    />
-                    <TextField
-                        label="Valor Mínimo"
-                        type="number"
-                        value={condition.min}
-                        onChange={(e) => handleConditionChange(key, Number(e.target.value), condition.trigger)}
-                        sx={{ mr: 1 }}
-                    />
-                    <TextField
-                        label="Gatilho"
-                        value={condition.trigger}
-                        onChange={(e) => handleConditionChange(key, condition.min, e.target.value)}
-                        sx={{ mr: 1 }}
-                    />
+                    <TextField label="Condição" value={key} disabled sx={{ mr: 1 }} />
+                    <TextField label="Valor Mínimo" type="number" value={condition.min} sx={{ mr: 1 }}
+                        onChange={(e) => handleConditionChange(key, Number(e.target.value), condition.trigger)} />
+                    <TextField label="Gatilho" value={condition.trigger} sx={{ mr: 1 }}
+                        onChange={(e) => handleConditionChange(key, condition.min, e.target.value)} />
                     <IconButton onClick={() => handleRemoveCondition(key)}>
                         <DeleteIcon />
                     </IconButton>
                 </Box>
             ))}
             <Box sx={{ mb: 1 }}>
-                <TextField
-                    label="Condição"
-                    name="key"
-                    value={newCondition.key}
-                    onChange={handleNewConditionChange}
-                    sx={{ mr: 1 }}
-                />
-                <TextField
-                    label="Valor Mínimo"
-                    name="min"
-                    type="number"
-                    value={newCondition.min}
-                    onChange={handleNewConditionChange}
-                    sx={{ mr: 1 }}
-                />
-                <TextField
-                    label="Gatilho"
-                    name="trigger"
-                    value={newCondition.trigger}
-                    onChange={handleNewConditionChange}
-                    sx={{ mr: 1 }}
-                />
+                <TextField label="Condição" name="key" sx={{ mr: 1 }}
+                    value={newCondition.key} onChange={handleNewConditionChange} />
+                <TextField label="Valor Mínimo" name="min" type="number" sx={{ mr: 1 }}
+                    value={newCondition.min} onChange={handleNewConditionChange} />
+                <TextField label="Gatilho" name="trigger" sx={{ mr: 1 }}
+                    value={newCondition.trigger} onChange={handleNewConditionChange} />
                 <Button variant="outlined" onClick={handleAddNewCondition}>
                     ➕ Adicionar Condição
                 </Button>
             </Box>
-
             <Box>
                 <Button variant="contained" onClick={generateJsonFile} sx={{ mt: 3 }}>
                     📥 Baixar JSON
