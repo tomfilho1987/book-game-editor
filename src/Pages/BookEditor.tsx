@@ -130,11 +130,14 @@ const BookEditor: React.FC = () => {
     localStorage.setItem("bookData", JSON.stringify(chapters));
   }, [chapters]);
 
+   /**
+   * @effect Rola para o final da lista de capítulos quando um novo capítulo é adicionado.
+   */
   useEffect(() => {
-      if (chapterListRef.current) {
-          chapterListRef.current.scrollTop = chapterListRef.current.scrollHeight;
-      }
-  }, [chapters]); // Rola para o final da lista sempre que a lista de capítulos for atualizada
+    if (chapterListRef.current) {
+        chapterListRef.current.scrollTop = chapterListRef.current.scrollHeight;
+    }
+  }, [chapters.length]); // Rola apenas quando o *comprimento* da lista de capítulos muda (adição ou remoção)
 
   /**
    * @function handleChapterChange
@@ -524,7 +527,7 @@ const BookEditor: React.FC = () => {
 
   return (
 
-      <Grid2 container sx={{ minHeight: 1 }}>
+      <Grid2 container sx={{ minHeight: 1, mt: 2 }}>
         <Grid2 size={2}>
           <Box sx={{ p: 2 }}>
             <Typography variant="h6">Capítulos</Typography>
@@ -550,15 +553,15 @@ const BookEditor: React.FC = () => {
                   ➕ Adicionar Capítulo
               </Button>
               <Divider sx={{ my: 2 }} />
-              <Button variant="contained" fullWidth onClick={handleSaveClick} startIcon={<SaveIcon />}>
+              <Button variant="contained" fullWidth startIcon={<SaveIcon />}>
                 Salvar
               </Button>
               <Divider sx={{ my: 2 }} />
-              <Button variant="outlined" fullWidth onClick={confirmationDialog} startIcon={<AddIcon />}>
+              <Button variant="outlined" fullWidth startIcon={<AddIcon />}>
                 Limpar
               </Button>
               <Divider sx={{ my: 2 }} />
-              <input type="file" accept=".json" onChange={loadJsonFile} style={{ display: "none" }} id="load-json-file" />
+              <input type="file" accept=".json" style={{ display: "none" }} id="load-json-file" />
               <label htmlFor="load-json-file">
                 <Button variant="outlined" component="span" fullWidth startIcon={<FileUploadIcon />}>
                   Carregar

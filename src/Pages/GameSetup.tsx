@@ -173,7 +173,7 @@ const GameSetup: React.FC = () => {
     };
 
     return (
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: 3, mt: 1 }}>
             <Typography variant="h6" gutterBottom>Recursos</Typography>
             {Object.entries(config.default_resources).map(([key, value]) => (
                 <Box key={key} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
