@@ -553,15 +553,15 @@ const BookEditor: React.FC = () => {
                   ➕ Adicionar Capítulo
               </Button>
               <Divider sx={{ my: 2 }} />
-              <Button variant="contained" fullWidth startIcon={<SaveIcon />}>
+              <Button variant="contained" onClick={handleSaveClick} fullWidth startIcon={<SaveIcon />}>
                 Salvar
               </Button>
               <Divider sx={{ my: 2 }} />
-              <Button variant="outlined" fullWidth startIcon={<AddIcon />}>
+              <Button variant="outlined" onClick={confirmationDialog} fullWidth startIcon={<AddIcon />}>
                 Limpar
               </Button>
               <Divider sx={{ my: 2 }} />
-              <input type="file" accept=".json" style={{ display: "none" }} id="load-json-file" />
+              <input type="file" accept=".json" onChange={loadJsonFile} style={{ display: "none" }} id="load-json-file" />
               <label htmlFor="load-json-file">
                 <Button variant="outlined" component="span" fullWidth startIcon={<FileUploadIcon />}>
                   Carregar
@@ -697,7 +697,7 @@ const BookEditor: React.FC = () => {
                                       <Box key={id} sx={{ mb: 2 }}> {/* Um Box para cada requisito */}
                                         <FormControlLabel
                                           control={<Checkbox checked={req.isHidden} onChange={(e) => updateRequirement(index, id, req.value, req.isCost, e.target.checked)} />}
-                                          label="Oculto"
+                                          label="Ocultar"
                                         />
                                         <Box sx={{ display: "flex", alignItems: "center" }}> {/* Box para alinhar os outros elementos */}
                                           <TextField
