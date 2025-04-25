@@ -522,6 +522,10 @@ const BookEditor: React.FC = () => {
    * @description Abre o popup de confirmação para salvar o arquivo.
    */
   const handleSaveClick = () => {
+    if (chapters.length === 0) {
+      alert("Nenhum capítulo criado. O arquivo JSON não será gerado.");
+      return; // Sai da função sem gerar o arquivo
+    }
     setOpenDialog(true);
   };
 
