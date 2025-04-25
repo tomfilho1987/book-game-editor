@@ -584,60 +584,13 @@ const BookEditor: React.FC = () => {
 
                 {/* Abas */}
                 <Tabs value={tabFilha} onChange={(_, newIndex) => setTabFilha(newIndex)} sx={{ mt: 2 }}>
-                  <Tab label="On Start" />
                   <Tab label="Escolhas" />
+                  <Tab label="Gatilhos do Capítulo" />
                 </Tabs>
 
-                {/* Aba On Start */}
-                {tabFilha === 0 && (
-                    <Box sx={{ mt: 3 }}>
-                        <Typography variant="h6" sx={{ mt: 2 }}>
-                          On Start
-                        </Typography>
-                        {selectedChapter.on_start && (
-                            Object.entries(selectedChapter.on_start).map(([key, value], index) => (
-                              <Box key={`<span class="math-inline">\{key\}\-</span>{index}`} sx={{ mb: 2 }}> {/* Adiciona margem inferior para separar os itens */}
-                                <FormControlLabel
-                                  control={
-                                    <Checkbox
-                                      checked={isOnStartHidden(key)}
-                                      onChange={(e) => handleOnStartHiddenChange(key, e.target.checked)}
-                                    />
-                                  }
-                                  label="Ocultar"
-                                />
-                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                  <TextField
-                                    label="Recurso"
-                                    value={key}
-                                    onChange={(e) => updateOnStartKey(key, e.target.value, value)}
-                                    sx={{ mr: 1, width: "300px" }}
-                                  />
-                                  <TextField
-                                    label="Valor"
-                                    value={value}
-                                    onChange={(e) => updateOnStartValue(key, e.target.value)}
-                                    sx={{ mr: 1 }}
-                                  />
-
-                                  <IconButton onClick={() => removeOnStart(key)}>
-                                      <DeleteIcon color="error" />
-                                  </IconButton>
-                                </Box>
-                              </Box>
-                          ))
-                        )}
-                        <Button variant="outlined" sx={{ mt: 1 }} onClick={addOnStart}>
-                            ➕ Adicionar On Start
-                        </Button>
-                    </Box>
-                )}
                 {/* Aba Escolhas */}
-                {tabFilha === 1 && (
+                {tabFilha === 0 && (
                   <Box sx={{ mt: 3 }}>
-                      <Typography variant="h6" sx={{ mt: 2 }}>
-                          Escolhas
-                      </Typography>
                       {selectedChapter.choices.map((choice, index) => (
                         <Box>
                           <Accordion
@@ -734,7 +687,49 @@ const BookEditor: React.FC = () => {
                       ➕ Adicionar Escolha
                       </Button>
                   </Box>
-                )}            
+                )}
+
+                {/* Aba On Start */}
+                {tabFilha === 1 && (
+                    <Box sx={{ mt: 3 }}>
+                        {selectedChapter.on_start && (
+                            Object.entries(selectedChapter.on_start).map(([key, value], index) => (
+                              <Box key={`<span class="math-inline">\{key\}\-</span>{index}`} sx={{ mb: 2 }}> {/* Adiciona margem inferior para separar os itens */}
+                                <FormControlLabel
+                                  control={
+                                    <Checkbox
+                                      checked={isOnStartHidden(key)}
+                                      onChange={(e) => handleOnStartHiddenChange(key, e.target.checked)}
+                                    />
+                                  }
+                                  label="Ocultar"
+                                />
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                  <TextField
+                                    label="Recurso"
+                                    value={key}
+                                    onChange={(e) => updateOnStartKey(key, e.target.value, value)}
+                                    sx={{ mr: 1, width: "300px" }}
+                                  />
+                                  <TextField
+                                    label="Valor"
+                                    value={value}
+                                    onChange={(e) => updateOnStartValue(key, e.target.value)}
+                                    sx={{ mr: 1 }}
+                                  />
+
+                                  <IconButton onClick={() => removeOnStart(key)}>
+                                      <DeleteIcon color="error" />
+                                  </IconButton>
+                                </Box>
+                              </Box>
+                          ))
+                        )}
+                        <Button variant="outlined" sx={{ mt: 1 }} onClick={addOnStart}>
+                            ➕ Adicionar On Start
+                        </Button>
+                    </Box>
+                )}
               </>
             ) : (
               <Typography variant="h5" align="center">
