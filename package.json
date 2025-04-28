@@ -29,7 +29,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "start-nw": "nw ."
   },
   "eslintConfig": {
     "extends": [
@@ -48,5 +49,12 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "main": "build/index.html",
+  "window": {
+    "title": "Book Game Editor",
+    "width": 1024,
+    "height": 768,
+    "icon": "build/favicon.ico"
   }
 }

@@ -654,7 +654,7 @@ const BookEditor: React.FC = () => {
                                       <Box key={id} sx={{ mb: 2 }}> {/* Um Box para cada requisito */}
                                         <FormControlLabel
                                           control={<Checkbox checked={req.isHidden} onChange={(e) => updateRequirement(index, id, req.value, req.isCost, e.target.checked)} />}
-                                          label="Ocultar"
+                                          label="Oculto"
                                         />
                                         <Box sx={{ display: "flex", alignItems: "center" }}> {/* Box para alinhar os outros elementos */}
                                           <TextField
@@ -706,7 +706,7 @@ const BookEditor: React.FC = () => {
                                       onChange={(e) => handleOnStartHiddenChange(key, e.target.checked)}
                                     />
                                   }
-                                  label="Ocultar"
+                                  label="Oculto"
                                 />
                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                   <TextField
@@ -730,7 +730,7 @@ const BookEditor: React.FC = () => {
                           ))
                         )}
                         <Button variant="outlined" sx={{ mt: 1 }} onClick={addOnStart}>
-                            ➕ Adicionar On Start
+                            ➕ Adicionar Gatilho
                         </Button>
                     </Box>
                 )}
