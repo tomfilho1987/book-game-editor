@@ -27,8 +27,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { ICustomDialogAlert } from "../Interfaces/ICustomDialogAlert";
 import CustomAlertDialog from "../Components/CustomAlertDialog";
 
-const drawerWidth = 280;
-
 const initialData: Chapter[] = JSON.parse(localStorage.getItem("bookData") || "[]") || [
   {
     id: 1,
@@ -66,6 +64,9 @@ const BookEditor: React.FC = () => {
     { open: false, title: 'Confirma Operação?', message: '', param: '' })
 
   const [onStartHiddenStatus, setOnStartHiddenStatus] = useState<Record<number, Record<string, boolean>>>({});
+  const [firstDestinationAdded, setFirstDestinationAdded] = useState(false);
+  const [probabilityError, setProbabilityError] = useState<string | null>(null);
+  const [probabilityErrors, setProbabilityErrors] = useState<Record<number, string | null>>({});
 
   const getOnStartHiddenStatus = (chapterId: number, key: string): boolean => {
     return onStartHiddenStatus[chapterId]?.[key] || false;
@@ -646,8 +647,30 @@ const BookEditor: React.FC = () => {
                                       getOptionLabel={(option: IChapterOption) => option.title}
                                       value={[]}
                                       onChange={(_, newValue) => {
-                                        const newTargets = [...(choice.targets || []), ...newValue.map(option => ({ targetId: option.id, probability: 0 }))];
-                                        updateChoice(index, { ...choice, targets: newTargets });
+                                        const currentTargets = choice.targets || [];
+                                        const newDestinations = newValue.map(option => ({ targetId: option.id, probability: 0 }));
+                                        const updatedTargets = [...currentTargets, ...newDestinations];
+                                  
+                                        if (updatedTargets.length === 1) {
+                                          // Primeiro destino: preencher com 100 e manter disabled (por enquanto, controlaremos isso via estado local)
+                                          updateChoice(index, { ...choice, targets: [{ ...updatedTargets[0], probability: 100 }] });
+                                          setFirstDestinationAdded(true); // Usaremos um estado local para controlar o disabled
+                                        } else if (updatedTargets.length > 1) {
+                                          // Segundo destino ou mais: calcular a porcentagem e habilitar a edição
+                                          const equalProbability = Math.floor(100 / updatedTargets.length);
+                                          const remainder = 100 % updatedTargets.length;
+                                  
+                                          const finalTargets = updatedTargets.map((target, i) => ({
+                                            ...target,
+                                            probability: equalProbability + (i < remainder ? 1 : 0),
+                                          }));
+                                  
+                                          updateChoice(index, { ...choice, targets: finalTargets });
+                                          setFirstDestinationAdded(false); // Habilitar a edição
+                                        } else {
+                                          updateChoice(index, { ...choice, targets: [] });
+                                          setFirstDestinationAdded(false);
+                                        }
                                       }}
                                       renderInput={(params) => <TextField {...params} label="Adicionar Destinos" />}
                                       filterOptions={(options, params): IChapterOption[] => {
@@ -666,8 +689,30 @@ const BookEditor: React.FC = () => {
                                           edge="end"
                                           aria-label="delete"
                                           onClick={() => {
-                                            const updatedDestinations = choice.targets.filter((_, i) => i !== targetIndex);
-                                            updateChoice(index, { ...choice, targets: updatedDestinations });
+                                            const updatedTargets = choice.targets.filter((_, i) => i !== targetIndex);
+
+                                            if (updatedTargets.length === 1) {
+                                              // Apenas um destino restante: definir para 100 e habilitar o estado de "primeiro destino"
+                                              updateChoice(index, { ...choice, targets: [{ ...updatedTargets[0], probability: 100 }] });
+                                              setFirstDestinationAdded(true);
+                                            } else if (updatedTargets.length > 1) {
+                                              // Mais de um destino restante: recalcular as porcentagens
+                                              const equalProbability = Math.floor(100 / updatedTargets.length);
+                                              const remainder = 100 % updatedTargets.length;
+                                          
+                                              const finalTargets = updatedTargets.map((target, i) => ({
+                                                ...target,
+                                                probability: equalProbability + (i < remainder ? 1 : 0),
+                                              }));
+                                              updateChoice(index, { ...choice, targets: finalTargets });
+                                              setFirstDestinationAdded(false); // Habilitar a edição
+                                              setProbabilityErrors({}); // Limpar os erros ao recalcular
+                                            } else {
+                                              // Nenhum destino restante
+                                              updateChoice(index, { ...choice, targets: [] });
+                                              setFirstDestinationAdded(false);
+                                              setProbabilityErrors({}); // Limpar os erros se não houver destinos
+                                            }
                                           }}
                                         >
                                           <DeleteIcon />
@@ -684,17 +729,31 @@ const BookEditor: React.FC = () => {
                                           <Grid item md={2}>
                                             <TextField
                                               fullWidth
-                                              label="Porcentagem"
+                                              label="Chance"
                                               type="text"
                                               value={target.probability}
                                               onChange={(e) => {
                                                 const newProbability = Number(e.target.value);
-                                                const updatedDestinations = choice.targets.map((dest, i) =>
-                                                  i === targetIndex ? { ...dest, probability: newProbability } : dest
+                                                const updatedTargetsWithNewProbability = choice.targets.map((t, i) =>
+                                                  i === targetIndex ? { ...t, probability: newProbability } : t
                                                 );
-                                                updateChoice(index, { ...choice, targets: updatedDestinations });
+
+                                                const sumOfProbabilities = updatedTargetsWithNewProbability.reduce((sum, t) => sum + t.probability, 0);
+
+                                                const newErrors = { ...probabilityErrors }; // Crie uma cópia dos erros existentes
+
+                                                if (sumOfProbabilities <= 100) {
+                                                  updateChoice(index, { ...choice, targets: updatedTargetsWithNewProbability });
+                                                  newErrors[targetIndex] = null; // Limpa o erro para este campo
+                                                } else {
+                                                  newErrors[targetIndex] = "A soma das porcentagens não pode exceder 100%."; // Seta o erro para este campo
+                                                }
+                                                setProbabilityErrors(newErrors); // Atualiza o estado de erros
                                               }}
                                               inputProps={{ min: 0, max: 100 }}
+                                              disabled={firstDestinationAdded && choice.targets?.length === 1}
+                                              error={!!probabilityErrors[targetIndex]} // Verifica se há um erro para este campo
+                                              helperText={probabilityErrors[targetIndex]} // Exibe a mensagem de erro para este campo
                                             />
                                           </Grid>
                                         </Grid>
