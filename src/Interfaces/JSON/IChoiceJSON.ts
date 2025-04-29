@@ -4,7 +4,7 @@
  */
 
 export interface IChoiceJSON {
-    targets: string[];
+    targets: { targetId: number; probability: number }[]; // Array de objetos com ID e probabilidade
     text: string;
     requirement?: Record<string, number | string>;
   }

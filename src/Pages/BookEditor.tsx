@@ -10,7 +10,8 @@ import { Box, Button, Checkbox, Divider, Drawer, IconButton, FormControlLabel,
     List, ListItem, ListItemButton, ListItemText, Tab, Tabs, TextField, Toolbar, Typography,
     Autocomplete, createFilterOptions, Accordion, AccordionSummary, AccordionDetails,
     Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, 
-    Grid2} from "@mui/material";
+    Grid2,
+    Grid} from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SaveIcon from "@mui/icons-material/Save";
 import AddIcon from "@mui/icons-material/Add";
@@ -160,18 +161,17 @@ const BookEditor: React.FC = () => {
    */
   const addChoice = () => {
     if (!selectedChapter) return;
-
-    // Fecha todos os accordions existentes
+  
     const updatedChoices = selectedChapter.choices.map(choice => ({
       ...choice,
       expanded: false,
     }));
-
+  
     const newChoice: Choice & { expanded: boolean } = {
-        id: uuidv4(),
-        target: 0,
-        text: "",
-        expanded: true, // Inicializa o accordion como expandido
+      id: uuidv4(),
+      targets: [], // Inicializa destinations como um array vazio
+      text: "",
+      expanded: true,
     };
     handleChapterChange("choices", [...updatedChoices, newChoice]);
   };
@@ -401,7 +401,7 @@ const BookEditor: React.FC = () => {
 
           return {
             text: choice.text,
-            targets: [String(choice.target)],
+            targets: [String(choice.targets)],
             ...(Object.keys(requirements).length > 0 && { requirement: requirements }),
             ...(Object.keys(costs).length > 0 && { cost: costs }),
           };
@@ -468,7 +468,7 @@ const BookEditor: React.FC = () => {
   const loadJsonFile = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-  
+
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
@@ -480,27 +480,39 @@ const BookEditor: React.FC = () => {
               id: Number(id),
               title: `Capítulo ${id}`,
               text: chapterData.text,
-              choices: chapterData.choices.map((choiceJSON: IChoiceJSON) => ({
-                id: uuidv4(),
-                target: Number(choiceJSON.targets[0]),
-                text: choiceJSON.text,
-                requirement: choiceJSON.requirement
-                  ? Object.entries(choiceJSON.requirement).reduce(
-                    (acc, [reqKey, reqData]) => { // 'reqKey' aqui é a chave original do requisito
-                      const newRequirementId = uuidv4();
-                      acc[newRequirementId] = {
-                        key: reqKey, // Use a chave original como 'key'
-                        value: reqData as number | string,
-                        isCost: false,
-                        isHidden: false,
-                        id: newRequirementId, // Se você ainda quiser manter um ID interno
-                      };
-                      return acc;
-                    },
-                    {} as Record<string, { key: string; value: number | string; isCost: boolean; isHidden: boolean; id?: string }>
-                  )
-                  : undefined,
-              })),
+              choices: chapterData.choices.map((choiceJSON: IChoiceJSON) => {
+                const targetsWithProbability = choiceJSON.targets?.length > 0 && typeof choiceJSON.targets[0] === 'object'
+                  ? (choiceJSON.targets as { targetId: number; probability: number }[]).map(target => ({
+                    targetId: Number(target.targetId), // Converte targetId para number
+                    probability: Number(target.probability), // Converte probability para number
+                  }))
+                  : choiceJSON.targets?.map(targetStr => ({
+                    targetId: Number(targetStr),
+                    probability: 100 / (choiceJSON.targets?.length || 1),
+                  })) || [];
+
+                return {
+                  id: uuidv4(),
+                  targets: targetsWithProbability,
+                  text: choiceJSON.text,
+                  requirement: choiceJSON.requirement
+                    ? Object.entries(choiceJSON.requirement).reduce(
+                        (acc, [reqKey, reqData]) => {
+                          const newRequirementId = uuidv4();
+                          acc[newRequirementId] = {
+                            key: reqKey,
+                            value: reqData as number | string,
+                            isCost: false,
+                            isHidden: false,
+                            id: newRequirementId,
+                          };
+                          return acc;
+                        },
+                        {} as Record<string, { key: string; value: number | string; isCost: boolean; isHidden: boolean; id?: string }>
+                      )
+                    : undefined,
+                };
+              }),
               on_start: chapterData.on_start,
             };
           }
@@ -610,51 +622,95 @@ const BookEditor: React.FC = () => {
                               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                                   <Typography>Escolha {index + 1}</Typography>
                               </AccordionSummary>
-                              <AccordionDetails>
-                                  <Box sx={{ display: "flex", alignItems: "center", mb: 1, mt: 1 }}>
-                                      <TextField
-                                          label="Texto da Escolha"
-                                          value={choice.text}
-                                          onChange={(e) =>
-                                              updateChoice(index, { ...choice, text: e.target.value })
-                                          }
-                                          fullWidth
-                                          sx={{ width: "60%",mr: 1 }}
-                                      />
-                                      <Autocomplete
-                                          options={chapters
-                                              .filter((chapter) => chapter.id !== selectedChapter?.id)
-                                              .map((chapter) => ({
-                                                  id: chapter.id,
-                                                  title: chapter.title,
-                                              }))}
-                                          getOptionLabel={(option: IChapterOption) => option.title}
-                                          value={chapters.find((chapter) => chapter.id === choice.target) || null}
-                                          onChange={(_, newValue) => {
-                                              updateChoice(index, {
-                                                  ...choice,
-                                                  target: newValue ? newValue.id : 0,
-                                              });
+                              <AccordionDetails sx={{ display: 'flex', flexDirection: 'column' }}>
+                                <Grid container spacing={2} alignItems="center">
+                                  <Grid item xs={12} md={6}>
+                                    <TextField
+                                      label="Texto da Escolha"
+                                      fullWidth
+                                      value={choice.text}
+                                      onChange={(e) => updateChoice(index, { ...choice, text: e.target.value })}
+                                    />
+                                  </Grid>
+                                  <Grid item xs={12} md={6}>
+                                    <Autocomplete
+                                      multiple
+                                      fullWidth
+                                      options={chapters
+                                        .filter((chapter) => chapter.id !== selectedChapter?.id &&
+                                          !choice.targets?.some(dest => dest.targetId === chapter.id))
+                                        .map((chapter) => ({
+                                          id: chapter.id,
+                                          title: chapter.title,
+                                        }))}
+                                      getOptionLabel={(option: IChapterOption) => option.title}
+                                      value={[]}
+                                      onChange={(_, newValue) => {
+                                        const newTargets = [...(choice.targets || []), ...newValue.map(option => ({ targetId: option.id, probability: 0 }))];
+                                        updateChoice(index, { ...choice, targets: newTargets });
+                                      }}
+                                      renderInput={(params) => <TextField {...params} label="Adicionar Destinos" />}
+                                      filterOptions={(options, params): IChapterOption[] => {
+                                        const filtered = filterOptions(options, params);
+                                        return params.inputValue.length > 2 ? filtered : [];
+                                      }}
+                                    />
+                                  </Grid>
+                                </Grid>
+
+                                {choice.targets && choice.targets.length > 0 && (
+                                  <List sx={{ width: '100%' }}>
+                                    {choice.targets.map((target, targetIndex) => (
+                                      <ListItem key={targetIndex} secondaryAction={
+                                        <IconButton
+                                          edge="end"
+                                          aria-label="delete"
+                                          onClick={() => {
+                                            const updatedDestinations = choice.targets.filter((_, i) => i !== targetIndex);
+                                            updateChoice(index, { ...choice, targets: updatedDestinations });
                                           }}
-                                          renderInput={(params) => <TextField {...params} label="Destino" />}
-                                          sx={{ width: "40%", mr: 1 }}
-                                          filterOptions={(options, params): IChapterOption[] => {
-                                              const filtered = filterOptions(options, params);
-                                              return params.inputValue.length > 2 ? filtered : [];
-                                          }}
-                                      />
-                                      <IconButton onClick={() => removeChoice(index)}>
-                                          <DeleteIcon color="error" />
-                                      </IconButton>
-                                  </Box>
-                                  {/* Requisitos & Custos */}
-                                  <Typography variant="subtitle1">Requisitos & Custos</Typography>
+                                        >
+                                          <DeleteIcon />
+                                        </IconButton>
+                                      }>
+                                        <Grid container spacing={2} sx={{ justifyContent:"flex-end", display: 'flex', alignItems: 'center' }}>
+                                          <Grid item md={2}>
+                                            <ListItemText
+                                              primary={`Destino: ${
+                                                chapters.find((ch) => ch.id === target.targetId)?.title || target.targetId
+                                              }`}
+                                            />
+                                          </Grid>
+                                          <Grid item md={2}>
+                                            <TextField
+                                              fullWidth
+                                              label="Porcentagem"
+                                              type="text"
+                                              value={target.probability}
+                                              onChange={(e) => {
+                                                const newProbability = Number(e.target.value);
+                                                const updatedDestinations = choice.targets.map((dest, i) =>
+                                                  i === targetIndex ? { ...dest, probability: newProbability } : dest
+                                                );
+                                                updateChoice(index, { ...choice, targets: updatedDestinations });
+                                              }}
+                                              inputProps={{ min: 0, max: 100 }}
+                                            />
+                                          </Grid>
+                                        </Grid>
+                                      </ListItem>
+                                    ))}
+                                  </List>
+                                )}
+
+                                {/* Requisitos & Custos */}
+                                <Typography variant="subtitle1">Requisitos & Custos</Typography>
                                   {choice.requirement &&
                                     Object.entries(choice.requirement).map(([id, req]) => (
                                       <Box key={id} sx={{ mb: 2 }}> {/* Um Box para cada requisito */}
                                         <FormControlLabel
                                           control={<Checkbox checked={req.isHidden} onChange={(e) => updateRequirement(index, id, req.value, req.isCost, e.target.checked)} />}
-                                          label="Oculto"
+                                          label="Oculto?"
                                         />
                                         <Box sx={{ display: "flex", alignItems: "center" }}> {/* Box para alinhar os outros elementos */}
                                           <TextField
@@ -680,9 +736,13 @@ const BookEditor: React.FC = () => {
                                       </Box>
                                     ))
                                   }
-                                  <Button variant="outlined" onClick={() => addRequirementToChoice(index)}>
-                                      ➕ Adicionar Recurso
-                                  </Button>
+                                  <Grid container>
+                                    <Grid item md={3}>
+                                      <Button variant="outlined" onClick={() => addRequirementToChoice(index)}>
+                                          ➕ Adicionar Recurso
+                                      </Button>
+                                    </Grid>
+                                  </Grid>
                               </AccordionDetails>
                           </Accordion>
                         </Box>
@@ -706,7 +766,7 @@ const BookEditor: React.FC = () => {
                                       onChange={(e) => handleOnStartHiddenChange(key, e.target.checked)}
                                     />
                                   }
-                                  label="Oculto"
+                                  label="Oculto?"
                                 />
                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                   <TextField
