@@ -6,17 +6,13 @@
  * @version 1.0
  */
 import React, { useState, useEffect, useRef } from "react";
-import { Box, Button, Checkbox, Divider, Drawer, IconButton, FormControlLabel,
-    List, ListItem, ListItemButton, ListItemText, Tab, Tabs, TextField, Toolbar, Typography,
-    Autocomplete, createFilterOptions, Accordion, AccordionSummary, AccordionDetails,
-    Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, 
-    Grid2,
-    Grid} from "@mui/material";
+import { Box, Button, Checkbox, Divider, IconButton, FormControlLabel, List, ListItem, ListItemButton, ListItemText, Tab, Tabs, TextField, Typography,
+    Autocomplete, createFilterOptions, Accordion, AccordionSummary, AccordionDetails, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, 
+    Grid2, Grid} from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SaveIcon from "@mui/icons-material/Save";
 import AddIcon from "@mui/icons-material/Add";
 import FileUploadIcon from '@mui/icons-material/FileUpload';
-
 import { Chapter } from "../Types/Chapter";
 import { Choice } from "../Types/Choice";
 import { IChapterOption } from "../Interfaces/IChapterOption";
@@ -26,6 +22,7 @@ import { IChapterDataJSON } from "../Interfaces/JSON/IChapterDataJSON";
 import { v4 as uuidv4 } from 'uuid';
 import { ICustomDialogAlert } from "../Interfaces/ICustomDialogAlert";
 import CustomAlertDialog from "../Components/CustomAlertDialog";
+import { saveJsonFile } from "../Utils/saveGameData";
 
 const initialData: Chapter[] = JSON.parse(localStorage.getItem("bookData") || "[]") || [
   {
@@ -57,20 +54,11 @@ const BookEditor: React.FC = () => {
   const [loadedFileName, setLoadedFileName] = useState<string | null>(null);
   /** Estado para controlar a abertura do diálogo de salvar. */
   const [openDialog, setOpenDialog] = useState(false);
-
   const chapterListRef = useRef<HTMLDivElement>(null);
-
-  const [dialogAlert, setDialogAlert] = React.useState<ICustomDialogAlert>(
-    { open: false, title: 'Confirma Operação?', message: '', param: '' })
-
+  const [dialogAlert, setDialogAlert] = React.useState<ICustomDialogAlert>({ open: false, title: 'Confirma Operação?', message: '', param: '' })
   const [onStartHiddenStatus, setOnStartHiddenStatus] = useState<Record<number, Record<string, boolean>>>({});
   const [firstDestinationAdded, setFirstDestinationAdded] = useState(false);
-  const [probabilityError, setProbabilityError] = useState<string | null>(null);
   const [probabilityErrors, setProbabilityErrors] = useState<Record<number, string | null>>({});
-
-  const getOnStartHiddenStatus = (chapterId: number, key: string): boolean => {
-    return onStartHiddenStatus[chapterId]?.[key] || false;
-  };
 
   const updateOnStartKey = (oldKey: string, newKey: string, value: number | string) => {
     if (!selectedChapter || !selectedChapter.on_start) return;
@@ -98,15 +86,15 @@ const BookEditor: React.FC = () => {
     handleChapterChange("on_start", updatedOnStart);
   };
 
- /**
+  /**
    * @function isOnStartHidden
    * @description Verifica se um item específico do "On Start" está marcado como oculto.
    * @param {string} key - A chave do item "On Start".
    * @returns {boolean} - True se o item estiver marcado como oculto, false caso contrário.
    */
- const isOnStartHidden = (key: string): boolean => {
+  const isOnStartHidden = (key: string): boolean => {
   return onStartHiddenStatus[selectedChapter?.id || -1]?.[key] || false;
-};
+  };
 
   /**
  * @function handleOnStartHiddenChange
@@ -132,7 +120,7 @@ const BookEditor: React.FC = () => {
     localStorage.setItem("bookData", JSON.stringify(chapters));
   }, [chapters]);
 
-   /**
+  /**
    * @effect Rola para o final da lista de capítulos quando um novo capítulo é adicionado.
    */
   useEffect(() => {
@@ -175,17 +163,6 @@ const BookEditor: React.FC = () => {
       expanded: true,
     };
     handleChapterChange("choices", [...updatedChoices, newChoice]);
-  };
-
-  /**
-   * @function removeChoice
-   * @description Remove a escolha especificada do capítulo selecionado.
-   * @param {number} index - O índice da escolha a ser removida.
-   */
-  const removeChoice = (index: number) => {
-    if (!selectedChapter) return;
-    const updatedChoices = selectedChapter.choices.filter((_, i) => i !== index);
-    handleChapterChange("choices", updatedChoices);
   };
 
   /**
@@ -295,30 +272,6 @@ const BookEditor: React.FC = () => {
   };
 
   /**
-   * @function updateOnStart
-   * @description Atualiza um item dentro do "on_start" do capítulo selecionado.
-   * @param {string} oldKey - A chave antiga do item.
-   * @param {string | null} newKey - A nova chave do item.
-   * @param {number | string} newValue - O novo valor do item.
-   */
-  const updateOnStart = (oldKey: string, newKey: string, newValue: number | string) => {
-    if (!selectedChapter || !selectedChapter.on_start) return;
-  
-    const updatedOnStart: Record<string, number | string> = {};
-  
-    Object.entries(selectedChapter.on_start).forEach(([key, value]) => {
-      if (key === oldKey) {
-        updatedOnStart[newKey] = newValue;
-      } else {
-        updatedOnStart[key] = value;
-      }
-    });
-  
-    // Atualiza o estado com o novo objeto on_start
-    handleChapterChange("on_start", updatedOnStart);
-  };
-
-  /**
    * @function removeOnStart
    * @description Remove um item do "on_start" do capítulo selecionado.
    * @param {string} key - A chave do item a ser removido.
@@ -370,69 +323,8 @@ const BookEditor: React.FC = () => {
    * @param {string} fileName - O nome do arquivo a ser salvo (opcional).
    * Se fornecido, sobrescreve o arquivo existente. Caso contrário, permite salvar como novo arquivo.
    */
-  const saveJsonFile = (fileName?: string) => {
-    const jsonStructure = {
-      chapters: chapters.reduce((acc, chapter) => {
-        const updatedOnStart: Record<string, number | string> = {};
-        if (chapter.on_start) {
-          Object.entries(chapter.on_start).forEach(([key, value]) => {
-            const isHidden = getOnStartHiddenStatus(chapter.id, key);
-            if (isHidden) {
-              updatedOnStart["#" + key] = value;
-            } else {
-              updatedOnStart[key] = value;
-            }
-          });
-        }
-
-        const choicesJSON = chapter.choices.map((choice) => {
-          const requirements: Record<string, number | string> = {};
-          const costs: Record<string, number | string> = {};
-
-          if (choice.requirement) {
-            Object.entries(choice.requirement).forEach(([requirementId, reqData]) => {
-              const finalKey = reqData.isHidden ? "#" + reqData.key : reqData.key;
-              if (reqData.isCost) {
-                costs[finalKey] = reqData.value;
-              } else {
-                requirements[finalKey] = reqData.value;
-              }
-            });
-          }
-
-          return {
-            text: choice.text,
-            targets: [String(choice.targets)],
-            ...(Object.keys(requirements).length > 0 && { requirement: requirements }),
-            ...(Object.keys(costs).length > 0 && { cost: costs }),
-          };
-        });
-
-        acc[chapter.id] = {
-          text: chapter.text,
-          choices: choicesJSON,
-          on_start: Object.keys(updatedOnStart).length > 0 ? updatedOnStart : undefined,
-        };
-        return acc;
-      }, {} as Record<string, any>),
-      game: "game",
-      start: chapters.length > 0 ? String(chapters[0].id) : "1",
-    };
-
-    const jsonString = JSON.stringify(jsonStructure, null, 2);
-    const blob = new Blob([jsonString], { type: "application/json" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-
-    if (fileName) {
-      link.download = fileName;
-    } else {
-      link.download = "livro_jogo.json";
-    }
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleSaveGame = () => {
+    saveJsonFile(chapters, onStartHiddenStatus, 'historia.json');
   };
 
   /**
@@ -455,11 +347,13 @@ const BookEditor: React.FC = () => {
   };
 
   const confirmationDialog = () => {
-    setDialogAlert({
-      ...dialogAlert,
-      open: true,
-      message: `Deseja realmente limpar essa história?`
-    });
+    if (chapters.length > 0) {
+      setDialogAlert({
+        ...dialogAlert,
+        open: true,
+        message: `Deseja realmente limpar essa história?`
+      });
+    }
   }
 
   /**
@@ -543,7 +437,6 @@ const BookEditor: React.FC = () => {
   };
 
   return (
-
       <Grid2 container sx={{ minHeight: 1, mt: 2 }}>
         <Grid2 size={2}>
           <Box sx={{ p: 2 }}>
@@ -878,7 +771,7 @@ const BookEditor: React.FC = () => {
               <Button variant="contained"
                 onClick={() => {
                   setOpenDialog(false);
-                  saveJsonFile(loadedFileName || "livro_jogo.json");
+                  handleSaveGame();
                 }}>
                 Salvar
               </Button>
