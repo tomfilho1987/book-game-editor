@@ -60,6 +60,15 @@ const BookEditor: React.FC = () => {
   const [firstDestinationAdded, setFirstDestinationAdded] = useState(false);
   const [probabilityErrors, setProbabilityErrors] = useState<Record<number, string | null>>({});
 
+  const [sumOfProbabilities, setSumOfProbabilities] = useState<number>(0);
+  const [probabilityValidationMessage, setProbabilityValidationMessage] = useState<string | null>(null);
+  const [currentChoiceIndex, setCurrentChoiceIndex] = useState<number>(0); // Índice da escolha sendo editada
+  const currentChapterIndex = chapters.findIndex(ch => ch.id === selectedChapter?.id);
+  const currentChapter = currentChapterIndex !== -1 ? chapters[currentChapterIndex] : null;
+  const currentChoice = currentChapter?.choices[currentChoiceIndex];
+  const [focusedProbabilityField, setFocusedProbabilityField] = useState<number | null>(null);
+  const [lastModifiedFieldBelow100, setLastModifiedFieldBelow100] = useState<number | null>(null);
+
   const updateOnStartKey = (oldKey: string, newKey: string, value: number | string) => {
     if (!selectedChapter || !selectedChapter.on_start) return;
     const updatedOnStart = { ...selectedChapter.on_start };
@@ -129,6 +138,17 @@ const BookEditor: React.FC = () => {
     }
   }, [chapters.length]); // Rola apenas quando o *comprimento* da lista de capítulos muda (adição ou remoção)
 
+  useEffect(() => {
+    if (currentChoice?.targets) {
+      const initialSum = currentChoice.targets.reduce((sum, target) => sum + Number(target.probability), 0);
+      setSumOfProbabilities(initialSum);
+      setProbabilityValidationMessage(initialSum === 100 || currentChoice.targets.length === 0 ? null : `A soma das probabilidades é ${initialSum}%, faltam ${100 - initialSum}%.`);
+    } else {
+      setSumOfProbabilities(0);
+      setProbabilityValidationMessage(null);
+    }
+  }, [currentChapterIndex, currentChoice?.targets]);
+
   /**
    * @function handleChapterChange
    * @description Atualiza o campo especificado do capítulo selecionado.
@@ -175,6 +195,12 @@ const BookEditor: React.FC = () => {
     if (!selectedChapter) return;
     const updatedChoices = [...selectedChapter.choices];
     updatedChoices[index] = newChoice;
+
+    // Recalcula a soma das probabilidades após a atualização
+    const newSum = newChoice.targets?.reduce((sum, target) => sum + Number(target.probability), 0) || 0;
+    setSumOfProbabilities(newSum);
+    setProbabilityValidationMessage(newSum === 100 || newChoice.targets?.length === 0 ? null : `A soma das probabilidades é ${newSum}%, faltam ${100 - newSum}%.`);
+
     handleChapterChange("choices", updatedChoices); // Use handleChapterChange para atualizar o estado chapters
   };
 
@@ -585,14 +611,12 @@ const BookEditor: React.FC = () => {
                                             const updatedTargets = choice.targets.filter((_, i) => i !== targetIndex);
 
                                             if (updatedTargets.length === 1) {
-                                              // Apenas um destino restante: definir para 100 e habilitar o estado de "primeiro destino"
                                               updateChoice(index, { ...choice, targets: [{ ...updatedTargets[0], probability: 100 }] });
                                               setFirstDestinationAdded(true);
                                             } else if (updatedTargets.length > 1) {
-                                              // Mais de um destino restante: recalcular as porcentagens
                                               const equalProbability = Math.floor(100 / updatedTargets.length);
                                               const remainder = 100 % updatedTargets.length;
-                                          
+
                                               const finalTargets = updatedTargets.map((target, i) => ({
                                                 ...target,
                                                 probability: equalProbability + (i < remainder ? 1 : 0),
@@ -611,7 +635,7 @@ const BookEditor: React.FC = () => {
                                           <DeleteIcon />
                                         </IconButton>
                                       }>
-                                        <Grid container spacing={2} sx={{ justifyContent:"flex-end", display: 'flex', alignItems: 'center' }}>
+                                        <Grid container spacing={2} sx={{ justifyContent: "flex-end", display: 'flex', alignItems: 'center' }}>
                                           <Grid item md={2}>
                                             <ListItemText
                                               primary={`Destino: ${
@@ -620,34 +644,56 @@ const BookEditor: React.FC = () => {
                                             />
                                           </Grid>
                                           <Grid item md={2}>
-                                            <TextField
-                                              fullWidth
-                                              label="Chance"
-                                              type="text"
-                                              value={target.probability}
-                                              onChange={(e) => {
-                                                const newProbability = Number(e.target.value);
-                                                const updatedTargetsWithNewProbability = choice.targets.map((t, i) =>
-                                                  i === targetIndex ? { ...t, probability: newProbability } : t
-                                                );
+                                          <TextField
+                                            key={targetIndex}
+                                            fullWidth
+                                            label="Chance"
+                                            type="number"
+                                            value={target.probability}
+                                            onFocus={() => setFocusedProbabilityField(targetIndex)}
+                                            onBlur={() => setFocusedProbabilityField(null)}
+                                            onChange={(e) => {
+                                              const newProbability = Number(e.target.value);
+                                              const currentTargets = choice.targets || [];
+                                              const updatedTargetsWithNewProbability = currentTargets.map((t, i) =>
+                                                i === targetIndex ? { ...t, probability: newProbability } : t
+                                              );
+                                              const sum = updatedTargetsWithNewProbability.reduce((s, t) => s + t.probability, 0);
+                                              const newErrors = { ...probabilityErrors };
+                                              newErrors[targetIndex] = null;
 
-                                                const sumOfProbabilities = updatedTargetsWithNewProbability.reduce((sum, t) => sum + t.probability, 0);
+                                              if (sum > 100) {
+                                                newErrors[targetIndex] = "A soma das probabilidades não pode exceder 100%.";
+                                              }
 
-                                                const newErrors = { ...probabilityErrors }; // Crie uma cópia dos erros existentes
+                                              setProbabilityErrors(newErrors);
+                                              setSumOfProbabilities(sum);
 
-                                                if (sumOfProbabilities <= 100) {
-                                                  updateChoice(index, { ...choice, targets: updatedTargetsWithNewProbability });
-                                                  newErrors[targetIndex] = null; // Limpa o erro para este campo
-                                                } else {
-                                                  newErrors[targetIndex] = "A soma das porcentagens não pode exceder 100%."; // Seta o erro para este campo
-                                                }
-                                                setProbabilityErrors(newErrors); // Atualiza o estado de erros
-                                              }}
-                                              inputProps={{ min: 0, max: 100 }}
-                                              disabled={firstDestinationAdded && choice.targets?.length === 1}
-                                              error={!!probabilityErrors[targetIndex]} // Verifica se há um erro para este campo
-                                              helperText={probabilityErrors[targetIndex]} // Exibe a mensagem de erro para este campo
-                                            />
+                                              if (sum < 100 && currentTargets.length > 0) {
+                                                setLastModifiedFieldBelow100(targetIndex);
+                                              } else if (sum === 100) {
+                                                setLastModifiedFieldBelow100(null);
+                                              }
+
+                                              if (sum <= 100) {
+                                                updateChoice(index, { ...choice, targets: updatedTargetsWithNewProbability });
+                                              }
+                                            }}
+                                            inputProps={{ min: 0, max: 100 }}
+                                            disabled={firstDestinationAdded && choice.targets?.length === 1}
+                                            error={!!probabilityErrors[targetIndex]}
+                                            helperText={
+                                              probabilityErrors[targetIndex] ? (
+                                                probabilityErrors[targetIndex]
+                                              ) : (
+                                                lastModifiedFieldBelow100 === targetIndex && sumOfProbabilities < 100 && choice.targets?.length > 0 ? (
+                                                  <Typography variant="caption" color="warning">
+                                                    A soma das probabilidades é {sumOfProbabilities}%, faltam {100 - sumOfProbabilities}%.
+                                                  </Typography>
+                                                ) : null
+                                              )
+                                            }
+                                          />
                                           </Grid>
                                         </Grid>
                                       </ListItem>

@@ -41,6 +41,7 @@ export const saveJsonFile = (
     const getOnStartHiddenStatusLocal = (chapterId: string | number, key: string): boolean => {
         return onStartHiddenStatus[Number(chapterId)]?.[key] || false;
     };
+
     const jsonStructure = {
         chapters: chapters.reduce((acc, chapter) => {
             const updatedOnStart: Record<string, number | string> = {};
@@ -59,17 +60,6 @@ export const saveJsonFile = (
                 const requirements: Record<string, number | string> = {};
                 const costs: Record<string, number | string> = {};
                 let targetsArray: string[] = [];
-
-                if (choice.requirement) {
-                    Object.entries(choice.requirement).forEach(([requirementId, reqData]) => {
-                        const finalKey = reqData.isHidden ? "#" + reqData.key : reqData.key;
-                        if (reqData.isCost) {
-                            costs[finalKey] = reqData.value;
-                        } else {
-                            requirements[finalKey] = reqData.value;
-                        }
-                    });
-                }
 
                 if (choice.targets.length === 1) {
                     targetsArray = [String(choice.targets[0].targetId)];
@@ -119,18 +109,17 @@ export const saveJsonFile = (
         start: chapters.length > 0 ? String(chapters[0].id) : "1",
     };
 
-    const jsonString = JSON.stringify(jsonStructure, null, 2);
+    let jsonString = JSON.stringify(jsonStructure, null, 2);
+
+    // Encontra o array "targets" e remove as quebras de linha e espaços entre os elementos
+    jsonString = jsonString.replace(/"targets": \[\n\s*"([^"]+)"(?:,\n\s*"([^"]+)")*\n\s*\]/g, (match) => {
+        return match.replace(/\n\s*/g, '');
+    });
 
     const blob = new Blob([jsonString], { type: "application/json" });
-    const link = document.createElement("a");
+    const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-
-    if (fileName) {
-        link.download = fileName;
-    } else {
-        link.download = "livro_jogo.json";
-    }
-
+    link.download = fileName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
