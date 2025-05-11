@@ -1,11 +1,10 @@
 /**
  * @file saveGameData.ts
-  * @author Airton Filho
- * @date 29/04/2025
- * @version 1.0
+ * @author Airton Filho
+ * @date 10/05/2025
+ * @version 9.0
  */
 
-import { useState } from "react";
 import { Chapter } from "../Types/Chapter";
 
 /**
@@ -14,12 +13,17 @@ import { Chapter } from "../Types/Chapter";
 
 /**
  * Gera um arquivo JSON contendo a estrutura do livro-jogo a partir dos capítulos fornecidos
- * e força o download no navegador do usuário.
+ * e força o download no navegador do usuário. Utiliza o título do capítulo como referência nos targets
+ * e inclui a propriedade 'image' de cada capítulo, com valor vazio caso não esteja definida.
+ * As propriedades dentro de cada capítulo são ordenadas como: 'choices' (com 'targets' e 'text' primeiro, seguido por 'cost' e 'requirement'),
+ * 'image', 'text' (do capítulo) e 'on_start'.
  *
  * @param {Chapter[]} chapters - Um array de objetos representando os capítulos do livro-jogo.
- * Cada capítulo deve ter uma estrutura que inclua 'id', 'text', 'choices' (um array de escolhas),
- * e opcionalmente 'on_start' (um objeto com ações ao iniciar o capítulo). Cada escolha deve ter
- * 'text' e 'targets' (um array de IDs de capítulos de destino, com repetições baseadas na probabilidade).
+ * Cada capítulo deve ter uma estrutura que inclua 'id', 'title', 'text', 'choices' (um array de escolhas),
+ * opcionalmente 'on_start' (um objeto com ações ao iniciar o capítulo) e opcionalmente 'image' (string com o caminho da imagem).
+ * Cada escolha tem 'id', 'targets', 'text' e opcionalmente 'requirement' (com informações de custo e requisito).
+ * @param {Record<number, Record<string, boolean>>} onStartHiddenStatus - Um objeto que mapeia o ID do capítulo
+ * para um objeto contendo o status de visibilidade de cada chave em 'on_start'.
  * @param {string} [fileName='livro_jogo.json'] - O nome do arquivo JSON a ser baixado.
  * Se não fornecido, o nome padrão será 'livro_jogo.json'.
  *
@@ -29,7 +33,7 @@ import { Chapter } from "../Types/Chapter";
  * import { chaptersData } from './data/chapters';
  *
  * const handleSave = () => {
- * saveJsonFile(chaptersData, 'minha_aventura.json');
+ * saveJsonFile(chaptersData, onStartHiddenStatus, 'minha_aventura.json');
  * };
  * ```
  */
@@ -38,6 +42,10 @@ export const saveJsonFile = (
     onStartHiddenStatus: Record<number, Record<string, boolean>>,
     fileName: string = 'livro_jogo.json'
 ) => {
+    const getChapterTitleById = (chapterId: number): string | undefined => {
+        return chapters.find(c => c.id === chapterId)?.title;
+    };
+
     const getOnStartHiddenStatusLocal = (chapterId: string | number, key: string): boolean => {
         return onStartHiddenStatus[Number(chapterId)]?.[key] || false;
     };
@@ -57,56 +65,66 @@ export const saveJsonFile = (
             }
 
             const choicesJSON = chapter.choices.map((choice) => {
-                const requirements: Record<string, number | string> = {};
-                const costs: Record<string, number | string> = {};
-                let targetsArray: string[] = [];
+                const requirementsObject: Record<string, any> = {};
+                const costsObject: Record<string, any> = {};
 
-                if (choice.targets.length === 1) {
-                    targetsArray = [String(choice.targets[0].targetId)];
-                } else if (choice.targets.length > 1) {
-                    const probabilityMap: Record<string, number> = {};
-                    choice.targets.forEach(t => {
-                        probabilityMap[String(t.targetId)] = t.probability;
-                    });
-
-                    const probabilities = Object.values(probabilityMap);
-
-                    const gcd = (a: number, b: number): number => {
-                        return b === 0 ? a : gcd(b, a % b);
-                    };
-
-                    let commonDivisor = probabilities[0] || 1;
-                    for (let i = 1; i < probabilities.length; i++) {
-                        commonDivisor = gcd(commonDivisor, probabilities[i]);
-                    }
-
-                    for (const targetId in probabilityMap) {
-                        const probability = probabilityMap[targetId];
-                        const occurrences = probability / commonDivisor;
-                        for (let i = 0; i < occurrences; i++) {
-                            targetsArray.push(targetId);
+                if (choice.requirement) {
+                    Object.values(choice.requirement).forEach(req => {
+                        if (req.isCost) {
+                            costsObject[req.key] = req.value;
+                        } else {
+                            requirementsObject[req.key] = req.value;
                         }
-                    }
-                    targetsArray.sort(() => Math.random() - 0.5);
+                    });
                 }
 
-                return {
+                const orderedChoice: any = {
+                    targets: choice.targets.length > 0 ? (choice.targets.length === 1 ? [getChapterTitleById(choice.targets[0].targetId)] : (() => {
+                        const probabilityMap: Record<string, number> = {};
+                        choice.targets.forEach(t => {
+                            const targetTitle = getChapterTitleById(t.targetId);
+                            if (targetTitle) {
+                                probabilityMap[targetTitle] = t.probability;
+                            }
+                        });
+
+                        const probabilities = Object.values(probabilityMap);
+                        const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+                        let commonDivisor = probabilities[0] || 1;
+                        for (let i = 1; i < probabilities.length; i++) {
+                            commonDivisor = gcd(commonDivisor, probabilities[i]);
+                        }
+
+                        const targetsArray: string[] = [];
+                        for (const targetTitle in probabilityMap) {
+                            const probability = probabilityMap[targetTitle];
+                            const occurrences = probability / commonDivisor;
+                            for (let i = 0; i < occurrences; i++) {
+                                targetsArray.push(targetTitle);
+                            }
+                        }
+                        targetsArray.sort(() => Math.random() - 0.5);
+                        return targetsArray;
+                    })()) : undefined,
                     text: choice.text,
-                    targets: targetsArray.length > 0 ? targetsArray : undefined,
-                    ...(Object.keys(requirements).length > 0 && { requirement: requirements }),
-                    ...(Object.keys(costs).length > 0 && { cost: costs }),
+                    ...(Object.keys(costsObject).length > 0 && { cost: costsObject }),
+                    ...(Object.keys(requirementsObject).length > 0 && { requirement: requirementsObject }),
                 };
+                return orderedChoice;
             });
 
-            acc[chapter.id] = {
-                text: chapter.text,
+            const orderedChapter = {
                 choices: choicesJSON,
-                on_start: Object.keys(updatedOnStart).length > 0 ? updatedOnStart : undefined,
+                image: chapter.image || "",
+                text: chapter.text,
+                ...(Object.keys(updatedOnStart).length > 0 && { on_start: updatedOnStart }),
             };
+
+            acc[chapter.title] = orderedChapter;
             return acc;
         }, {} as Record<string, any>),
         game: "game",
-        start: chapters.length > 0 ? String(chapters[0].id) : "1",
+        start: "start",
     };
 
     let jsonString = JSON.stringify(jsonStructure, null, 2);

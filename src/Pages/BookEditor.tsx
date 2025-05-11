@@ -48,8 +48,6 @@ const BookEditor: React.FC = () => {
   const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(
     chapters.length > 0 ? chapters[0] : null
   );
-  /** Estado para controlar a aba selecionada (On Start ou Escolhas). */
-  const [tabFilha, setTabFilha] = useState(0); // Controla as abas
   /** Estado para armazenar o nome do arquivo JSON carregado. */
   const [loadedFileName, setLoadedFileName] = useState<string | null>(null);
   /** Estado para controlar a abertura do diálogo de salvar. */
@@ -68,6 +66,17 @@ const BookEditor: React.FC = () => {
   const currentChoice = currentChapter?.choices[currentChoiceIndex];
   const [focusedProbabilityField, setFocusedProbabilityField] = useState<number | null>(null);
   const [lastModifiedFieldBelow100, setLastModifiedFieldBelow100] = useState<number | null>(null);
+  /** Estado para controlar a aba principal selecionada (0: Gatilhos, 1: Escolhas). */
+  const [selectedTab, setSelectedTab] = useState(0); // Inicialmente, Escolhas estará selecionada
+
+  const handleTabChange = (event: React.ChangeEvent<{}>, newValue: number) => {
+    setSelectedTab(newValue);
+  };
+
+  const handleChapterSelect = (chapter: Chapter) => {
+    setSelectedChapter(chapter);
+    setSelectedTab(0); // Define a aba principal para "ESCOLHAS" ao selecionar um capítulo
+  };
 
   const updateOnStartKey = (oldKey: string, newKey: string, value: number | string) => {
     if (!selectedChapter || !selectedChapter.on_start) return;
@@ -322,7 +331,7 @@ const BookEditor: React.FC = () => {
     };
     setChapters([...chapters, newChapter]);
     setSelectedChapter(newChapter);
-    setTabFilha(0); // Garante que a aba "On Start" esteja ativa
+    setSelectedTab(0); // Define a aba principal para "ESCOLHAS" ao adicionar um capítulo
 
     // Rola para o final da lista
     if (chapterListRef.current) {
@@ -472,7 +481,7 @@ const BookEditor: React.FC = () => {
                 const isSelected = ch.id === selectedChapter?.id;
                 return (
                   <ListItem key={ch.id} disablePadding>
-                    <ListItemButton selected={isSelected} onClick={() => setSelectedChapter(ch)}
+                    <ListItemButton selected={isSelected} onClick={() => handleChapterSelect(ch)}
                       sx={{ bgcolor: isSelected ? "#ddd" : "transparent", "&:hover": { bgcolor: "#ccc" } }} >
                       <ListItemText primary={ch.title} />
                     </ListItemButton>
@@ -519,13 +528,13 @@ const BookEditor: React.FC = () => {
                   onChange={(e) => handleChapterChange("text", e.target.value)} />
 
                 {/* Abas */}
-                <Tabs value={tabFilha} onChange={(_, newIndex) => setTabFilha(newIndex)} sx={{ mt: 2 }}>
+                <Tabs value={selectedTab} onChange={handleTabChange} sx={{ mt: 2 }}>
                   <Tab label="Escolhas" />
                   <Tab label="Gatilhos do Capítulo" />
                 </Tabs>
 
                 {/* Aba Escolhas */}
-                {tabFilha === 0 && (
+                {selectedTab === 0 && (
                   <Box sx={{ mt: 3 }}>
                       {selectedChapter.choices.map((choice, index) => (
                         <Box>
@@ -752,7 +761,7 @@ const BookEditor: React.FC = () => {
                 )}
 
                 {/* Aba On Start */}
-                {tabFilha === 1 && (
+                {selectedTab === 1 && (
                     <Box sx={{ mt: 3 }}>
                         {selectedChapter.on_start && (
                             Object.entries(selectedChapter.on_start).map(([key, value], index) => (

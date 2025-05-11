@@ -15,4 +15,6 @@ export type Chapter = {
     choices: Choice[];
     /** Ações a serem executadas ao iniciar o capítulo. */
     on_start?: Record<string, number | string>;
+    /** Imagem do capítulo. */
+    image?: string;
   };

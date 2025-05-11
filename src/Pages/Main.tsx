@@ -4,7 +4,6 @@ import BookEditor from "./BookEditor";
 import GameSetup from "./GameSetup";
 
 const Main: React.FC = () => {
-/** Estado para controlar a aba selecionada (História e Configuração). */
   const [tab, setTab] = useState(0); // Controla as abas
     return(
         <>
