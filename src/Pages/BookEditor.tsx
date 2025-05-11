@@ -57,6 +57,7 @@ const BookEditor: React.FC = () => {
   const chapterListRef = useRef<HTMLDivElement>(null);
   const [dialogAlert, setDialogAlert] = React.useState<ICustomDialogAlert>({ open: false, title: 'Confirma Operação?', message: '', param: '' })
   const [dialogInfo, setDialogInfo] = React.useState<ICustomDialogAlert>({ open: false, title: 'Aviso', message: '', param: '' })
+  const [deleteChoiceDialog, setDeleteChoiceDialog] = React.useState<ICustomDialogAlert>({ open: false, title: 'Confirma Exclusão?', message: '', param: 0 })
   const [onStartHiddenStatus, setOnStartHiddenStatus] = useState<Record<number, Record<string, boolean>>>({});
   const [firstDestinationAdded, setFirstDestinationAdded] = useState(false);
   const [probabilityErrors, setProbabilityErrors] = useState<Record<number, string | null>>({});
@@ -171,6 +172,7 @@ const BookEditor: React.FC = () => {
    * @param {any} value - O novo valor para o campo.
    */
   const handleChapterChange = (field: keyof Chapter, value: any) => {
+    debugger
     if (!selectedChapter) return;
     const updatedChapter = { ...selectedChapter, [field]: value };
     setSelectedChapter(updatedChapter);
@@ -346,19 +348,6 @@ const BookEditor: React.FC = () => {
   };
 
   /**
-   * @function removeChapter
-   * @description Remove um capítulo da lista de capítulos.
-   * @param {number} id - O ID do capítulo a ser removido.
-   */
-  const removeChapter = (id: number) => {
-    const updatedChapters = chapters.filter((ch) => ch.id !== id);
-    setChapters(updatedChapters);
-    if (selectedChapter?.id === id) {
-      setSelectedChapter(updatedChapters.length > 0 ? updatedChapters[0] : null);
-    }
-  };
-
-  /**
    * @constant filterOptions
    * @description Configura as opções de filtragem para o Autocomplete.
    */
@@ -467,6 +456,7 @@ const BookEditor: React.FC = () => {
     }
     return erros;
   };
+
   /**
    * @function handleSaveClick
    * @description Abre o popup de confirmação para salvar o arquivo.
@@ -507,6 +497,31 @@ const BookEditor: React.FC = () => {
 
   const handleCloseModal = () => {
     setDialogInfo({ ...dialogInfo, open: false, message: '' })
+  };
+
+  const removeChoice = (choiceIndex: number) => {
+    debugger
+    if (!selectedChapter) return;
+  
+    const updatedChoices = selectedChapter.choices.filter((_, index) => index !== choiceIndex);
+    handleChapterChange("choices", updatedChoices);
+  
+    // Se a escolha removida era a atualmente selecionada para edição,
+    // resetamos o índice para evitar erros.
+    if (currentChoiceIndex === choiceIndex && updatedChoices.length > 0) {
+      setCurrentChoiceIndex(0);
+    } else if (currentChoiceIndex === choiceIndex && updatedChoices.length === 0) {
+      setCurrentChoiceIndex(0); // Ou talvez null, dependendo da sua lógica de edição
+    } else if (currentChoiceIndex > choiceIndex) {
+      setCurrentChoiceIndex(prevIndex => prevIndex - 1);
+    }
+  };
+
+  const handleConfirmDeleteChoice = () => {
+    if (deleteChoiceDialog.param !== null) {
+      removeChoice(deleteChoiceDialog.param as number);
+    }
+    setDeleteChoiceDialog({ ...deleteChoiceDialog, open: false, param: 0 });
   };
 
   return (
@@ -574,13 +589,12 @@ const BookEditor: React.FC = () => {
                   onChange={(e) => handleChapterChange("text", e.target.value)} />
                 <TextField
                   label="Nome da Imagem (jpg ou png)"
-                  value={selectedChapter.image || ""} // Use o valor diretamente do selectedChapter
+                  value={selectedChapter.image || ""}
                   fullWidth
                   margin="normal"
                   onChange={(e) => {
                     const newImageName = e.target.value;
-                    // Validação em tempo real opcional aqui
-                    handleChapterChange("image", newImageName); // Atualiza diretamente o estado do capítulo
+                    handleChapterChange("image", newImageName);
                   }}
                   onBlur={() => {
                     // Validação quando o campo perde o foco
@@ -614,7 +628,18 @@ const BookEditor: React.FC = () => {
                               sx={{ mb: 2 }}
                           >
                               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                  <Typography>Escolha {index + 1}</Typography>
+                                <Typography>Escolha {index + 1}</Typography>
+                                {/* Botão de Exclusão */}
+                                <IconButton
+                                  aria-label="excluir"
+                                  onClick={(event) => {
+                                    event.stopPropagation(); // Impede que o Accordion se expanda/contraia
+                                    setDeleteChoiceDialog({ ...deleteChoiceDialog, open: true, param: index, message: 'Deseja realmente excluir esta Escolha?' });
+                                  }}
+                                  sx={{ ml: 'auto' }}
+                                >
+                                  <DeleteIcon />
+                                </IconButton>                                  
                               </AccordionSummary>
                               <AccordionDetails sx={{ display: 'flex', flexDirection: 'column' }}>
                                 <Grid container spacing={2} alignItems="center">
@@ -877,6 +902,10 @@ const BookEditor: React.FC = () => {
           <CustomAlertDialog open={dialogAlert.open} title={dialogAlert.title} message={dialogAlert.message} handleClickYes={clearHistory}
               handleClickNo={() => { setDialogAlert({ ...dialogAlert, open: false }) }}
               handleClickClose={() => { setDialogAlert({ ...dialogAlert, open: false }) }}
+          />
+          <CustomAlertDialog open={deleteChoiceDialog.open} title={deleteChoiceDialog.title} message={deleteChoiceDialog.message} handleClickYes={handleConfirmDeleteChoice}
+              handleClickNo={() => { setDeleteChoiceDialog({ ...deleteChoiceDialog, open: false }) }}
+              handleClickClose={() => { setDeleteChoiceDialog({ ...deleteChoiceDialog, open: false }) }}
           />
         </Grid2>
       </Grid2>
