@@ -22,7 +22,9 @@ import { IChapterDataJSON } from "../Interfaces/JSON/IChapterDataJSON";
 import { v4 as uuidv4 } from 'uuid';
 import { ICustomDialogAlert } from "../Interfaces/ICustomDialogAlert";
 import CustomAlertDialog from "../Components/CustomAlertDialog";
+import CustomDialogInformacao from "../Components/CustomDialogInformacao";
 import { saveJsonFile } from "../Utils/saveGameData";
+import { validarProbabilidades } from "../Utils/validarProbabilidades";
 
 const initialData: Chapter[] = JSON.parse(localStorage.getItem("bookData") || "[]") || [
   {
@@ -54,6 +56,7 @@ const BookEditor: React.FC = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const chapterListRef = useRef<HTMLDivElement>(null);
   const [dialogAlert, setDialogAlert] = React.useState<ICustomDialogAlert>({ open: false, title: 'Confirma Operação?', message: '', param: '' })
+  const [dialogInfo, setDialogInfo] = React.useState<ICustomDialogAlert>({ open: false, title: 'Aviso', message: '', param: '' })
   const [onStartHiddenStatus, setOnStartHiddenStatus] = useState<Record<number, Record<string, boolean>>>({});
   const [firstDestinationAdded, setFirstDestinationAdded] = useState(false);
   const [probabilityErrors, setProbabilityErrors] = useState<Record<number, string | null>>({});
@@ -66,6 +69,9 @@ const BookEditor: React.FC = () => {
   const currentChoice = currentChapter?.choices[currentChoiceIndex];
   const [focusedProbabilityField, setFocusedProbabilityField] = useState<number | null>(null);
   const [lastModifiedFieldBelow100, setLastModifiedFieldBelow100] = useState<number | null>(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
+
   /** Estado para controlar a aba principal selecionada (0: Gatilhos, 1: Escolhas). */
   const [selectedTab, setSelectedTab] = useState(0); // Inicialmente, Escolhas estará selecionada
 
@@ -353,16 +359,6 @@ const BookEditor: React.FC = () => {
   };
 
   /**
-   * @function saveJsonFile
-   * @description Salva os dados dos capítulos em um arquivo JSON.
-   * @param {string} fileName - O nome do arquivo a ser salvo (opcional).
-   * Se fornecido, sobrescreve o arquivo existente. Caso contrário, permite salvar como novo arquivo.
-   */
-  const handleSaveGame = () => {
-    saveJsonFile(chapters, onStartHiddenStatus, 'historia.json');
-  };
-
-  /**
    * @constant filterOptions
    * @description Configura as opções de filtragem para o Autocomplete.
    */
@@ -458,7 +454,7 @@ const BookEditor: React.FC = () => {
     };
     reader.readAsText(file);
   };
-
+   
   /**
    * @function handleSaveClick
    * @description Abre o popup de confirmação para salvar o arquivo.
@@ -466,9 +462,23 @@ const BookEditor: React.FC = () => {
   const handleSaveClick = () => {
     if (chapters.length === 0) {
       alert("Nenhum capítulo criado. O arquivo JSON não será gerado.");
-      return; // Sai da função sem gerar o arquivo
+      return;
     }
-    setOpenDialog(true);
+
+    const validationResult = validarProbabilidades(chapters);
+    if (validationResult === true) {
+        saveJsonFile(chapters, onStartHiddenStatus, 'historia.json');
+    } else if (typeof validationResult === 'string') {
+      setDialogInfo({ 
+        ...dialogInfo,
+        open: true, 
+        message: validationResult
+      });
+    }
+  };
+
+  const handleCloseModal = () => {
+    setDialogInfo({ ...dialogInfo, open: false, message: '' })
   };
 
   return (
@@ -485,7 +495,15 @@ const BookEditor: React.FC = () => {
                       sx={{ bgcolor: isSelected ? "#ddd" : "transparent", "&:hover": { bgcolor: "#ccc" } }} >
                       <ListItemText primary={ch.title} />
                     </ListItemButton>
-                    <IconButton onClick={() => removeChapter(ch.id)} edge="end">
+                    <IconButton edge="end" aria-label="delete" 
+                      onClick={() => 
+                        setDialogAlert({ 
+                          open: true, 
+                          title: 'Remover Capítulo?', 
+                          message: `Deseja remover o capítulo "${ch.title}"?`, 
+                          param: ch.id.toString()
+                        })
+                      }>
                       <DeleteIcon color="error" />
                     </IconButton>
                   </ListItem>
@@ -526,7 +544,26 @@ const BookEditor: React.FC = () => {
                   onChange={(e) => handleChapterChange("title", e.target.value)} />
                 <TextField label="Texto do Capítulo" value={selectedChapter.text} fullWidth margin="normal" multiline rows={4}
                   onChange={(e) => handleChapterChange("text", e.target.value)} />
-
+                <TextField
+                  label="Nome da Imagem (jpg ou png)"
+                  value={selectedChapter.image || ""} // Use o valor diretamente do selectedChapter
+                  fullWidth
+                  margin="normal"
+                  onChange={(e) => {
+                    const newImageName = e.target.value;
+                    // Validação em tempo real opcional aqui
+                    handleChapterChange("image", newImageName); // Atualiza diretamente o estado do capítulo
+                  }}
+                  onBlur={() => {
+                    // Validação quando o campo perde o foco
+                    if (selectedChapter.image &&
+                          selectedChapter.image !== "" &&
+                            !selectedChapter.image.toLowerCase().endsWith(".jpg") &&
+                              !selectedChapter.image.toLowerCase().endsWith(".png")) {
+                      alert("O nome da imagem deve ter a extensão .jpg ou .png");
+                    }
+                  }}
+                />
                 {/* Abas */}
                 <Tabs value={selectedTab} onChange={handleTabChange} sx={{ mt: 2 }}>
                   <Tab label="Escolhas" />
@@ -808,30 +845,11 @@ const BookEditor: React.FC = () => {
               </Typography>
             )}
           </Box>
+          <CustomDialogInformacao titulo={dialogInfo.title} abrirModal={dialogInfo.open} handleFechar={handleCloseModal} mensagem={dialogInfo.message} />
           <CustomAlertDialog open={dialogAlert.open} title={dialogAlert.title} message={dialogAlert.message} handleClickYes={clearHistory}
               handleClickNo={() => { setDialogAlert({ ...dialogAlert, open: false }) }}
               handleClickClose={() => { setDialogAlert({ ...dialogAlert, open: false }) }}
           />
-          <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-            <DialogTitle>Salvar Arquivo</DialogTitle>
-            <DialogContent>
-              <DialogContentText>
-                {loadedFileName
-                  ? `O arquivo original "${loadedFileName}" não será sobrescrito. Um novo arquivo será baixado com o mesmo nome.`
-                  : "Deseja salvar como um novo arquivo?"}
-              </DialogContentText>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setOpenDialog(false)}>Cancelar</Button>
-              <Button variant="contained"
-                onClick={() => {
-                  setOpenDialog(false);
-                  handleSaveGame();
-                }}>
-                Salvar
-              </Button>
-            </DialogActions>
-          </Dialog>
         </Grid2>
       </Grid2>
   );
