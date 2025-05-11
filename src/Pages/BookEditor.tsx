@@ -172,7 +172,6 @@ const BookEditor: React.FC = () => {
    * @param {any} value - O novo valor para o campo.
    */
   const handleChapterChange = (field: keyof Chapter, value: any) => {
-    debugger
     if (!selectedChapter) return;
     const updatedChapter = { ...selectedChapter, [field]: value };
     setSelectedChapter(updatedChapter);
@@ -463,7 +462,7 @@ const BookEditor: React.FC = () => {
    */
   const handleSaveClick = () => {
     if (chapters.length === 0) {
-      alert("Nenhum capítulo criado. O arquivo JSON não será gerado.");
+      setDialogInfo({ ...dialogInfo, open: true, message: "Nenhum capítulo criado. O arquivo JSON não será gerado." });
       return;
     }
 
@@ -473,13 +472,7 @@ const BookEditor: React.FC = () => {
       const errorMessage = errosDeImagem
         .map(item => `O nome da imagem "${item.imageName}" no capítulo "${item.chapterTitle}" deve ter a extensão .jpg ou .png.`)
         .join("\n");
-
-      setDialogInfo({
-        ...dialogInfo,
-        open: true,
-        message: errorMessage,
-      });
-
+      setDialogInfo({ ...dialogInfo, open: true, message: errorMessage });
       return;
     }
 
@@ -487,11 +480,7 @@ const BookEditor: React.FC = () => {
     if (validationResult === true) {
         saveJsonFile(chapters, onStartHiddenStatus, 'historia.json');
     } else if (typeof validationResult === 'string') {
-      setDialogInfo({ 
-        ...dialogInfo,
-        open: true, 
-        message: validationResult
-      });
+      setDialogInfo({ ...dialogInfo, open: true,  message: validationResult });
     }
   };
 
@@ -500,7 +489,6 @@ const BookEditor: React.FC = () => {
   };
 
   const removeChoice = (choiceIndex: number) => {
-    debugger
     if (!selectedChapter) return;
   
     const updatedChoices = selectedChapter.choices.filter((_, index) => index !== choiceIndex);
@@ -587,22 +575,15 @@ const BookEditor: React.FC = () => {
                   onChange={(e) => handleChapterChange("title", e.target.value)} />
                 <TextField label="Texto do Capítulo" value={selectedChapter.text} fullWidth margin="normal" multiline rows={4}
                   onChange={(e) => handleChapterChange("text", e.target.value)} />
-                <TextField
-                  label="Nome da Imagem (jpg ou png)"
-                  value={selectedChapter.image || ""}
-                  fullWidth
-                  margin="normal"
-                  onChange={(e) => {
-                    const newImageName = e.target.value;
-                    handleChapterChange("image", newImageName);
-                  }}
+                <TextField label="Nome da Imagem (jpg ou png)" value={selectedChapter.image || ""} fullWidth margin="normal"
+                  onChange={(e) => { handleChapterChange("image", e.target.value); }}
                   onBlur={() => {
                     // Validação quando o campo perde o foco
                     if (selectedChapter.image &&
                           selectedChapter.image !== "" &&
                             !selectedChapter.image.toLowerCase().endsWith(".jpg") &&
                               !selectedChapter.image.toLowerCase().endsWith(".png")) {
-                      alert("O nome da imagem deve ter a extensão .jpg ou .png");
+                                setDialogInfo({ ...dialogInfo, open: true, message: "O nome da imagem deve ter a extensão .jpg ou .png"})
                     }
                   }}
                 />
@@ -625,36 +606,26 @@ const BookEditor: React.FC = () => {
                                   updatedChoices[index].expanded = !updatedChoices[index].expanded;
                                   handleChapterChange("choices", updatedChoices);
                               }}
-                              sx={{ mb: 2 }}
-                          >
+                              sx={{ mb: 2 }} >
                               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                                 <Typography>Escolha {index + 1}</Typography>
                                 {/* Botão de Exclusão */}
-                                <IconButton
-                                  aria-label="excluir"
+                                <IconButton aria-label="excluir"
                                   onClick={(event) => {
-                                    event.stopPropagation(); // Impede que o Accordion se expanda/contraia
+                                    event.stopPropagation();
                                     setDeleteChoiceDialog({ ...deleteChoiceDialog, open: true, param: index, message: 'Deseja realmente excluir esta Escolha?' });
-                                  }}
-                                  sx={{ ml: 'auto' }}
-                                >
+                                  }} sx={{ ml: 'auto' }} >
                                   <DeleteIcon />
                                 </IconButton>                                  
                               </AccordionSummary>
                               <AccordionDetails sx={{ display: 'flex', flexDirection: 'column' }}>
                                 <Grid container spacing={2} alignItems="center">
                                   <Grid item xs={12} md={6}>
-                                    <TextField
-                                      label="Texto da Escolha"
-                                      fullWidth
-                                      value={choice.text}
-                                      onChange={(e) => updateChoice(index, { ...choice, text: e.target.value })}
-                                    />
+                                    <TextField label="Texto da Escolha" fullWidth value={choice.text}
+                                      onChange={(e) => updateChoice(index, { ...choice, text: e.target.value })} />
                                   </Grid>
                                   <Grid item xs={12} md={6}>
-                                    <Autocomplete
-                                      multiple
-                                      fullWidth
+                                    <Autocomplete multiple fullWidth
                                       options={chapters
                                         .filter((chapter) => chapter.id !== selectedChapter?.id &&
                                           !choice.targets?.some(dest => dest.targetId === chapter.id))
@@ -702,52 +673,47 @@ const BookEditor: React.FC = () => {
                                 {choice.targets && choice.targets.length > 0 && (
                                   <List sx={{ width: '100%' }}>
                                     {choice.targets.map((target, targetIndex) => (
-                                      <ListItem key={targetIndex} secondaryAction={
-                                        <IconButton
-                                          edge="end"
-                                          aria-label="delete"
-                                          onClick={() => {
-                                            const updatedTargets = choice.targets.filter((_, i) => i !== targetIndex);
+                                      <ListItem key={targetIndex}
+                                        secondaryAction={
+                                          <IconButton
+                                            edge="end"
+                                            aria-label="delete"
+                                            onClick={() => {
+                                              const updatedTargets = choice.targets.filter((_, i) => i !== targetIndex);
 
-                                            if (updatedTargets.length === 1) {
-                                              updateChoice(index, { ...choice, targets: [{ ...updatedTargets[0], probability: 100 }] });
-                                              setFirstDestinationAdded(true);
-                                            } else if (updatedTargets.length > 1) {
-                                              const equalProbability = Math.floor(100 / updatedTargets.length);
-                                              const remainder = 100 % updatedTargets.length;
+                                              if (updatedTargets.length === 1) {
+                                                updateChoice(index, { ...choice, targets: [{ ...updatedTargets[0], probability: 100 }] });
+                                                setFirstDestinationAdded(true);
+                                              } else if (updatedTargets.length > 1) {
+                                                const equalProbability = Math.floor(100 / updatedTargets.length);
+                                                const remainder = 100 % updatedTargets.length;
 
-                                              const finalTargets = updatedTargets.map((target, i) => ({
-                                                ...target,
-                                                probability: equalProbability + (i < remainder ? 1 : 0),
-                                              }));
-                                              updateChoice(index, { ...choice, targets: finalTargets });
-                                              setFirstDestinationAdded(false); // Habilitar a edição
-                                              setProbabilityErrors({}); // Limpar os erros ao recalcular
-                                            } else {
-                                              // Nenhum destino restante
-                                              updateChoice(index, { ...choice, targets: [] });
-                                              setFirstDestinationAdded(false);
-                                              setProbabilityErrors({}); // Limpar os erros se não houver destinos
-                                            }
-                                          }}
-                                        >
-                                          <DeleteIcon />
-                                        </IconButton>
-                                      }>
+                                                const finalTargets = updatedTargets.map((target, i) => ({
+                                                  ...target,
+                                                  probability: equalProbability + (i < remainder ? 1 : 0),
+                                                }));
+                                                updateChoice(index, { ...choice, targets: finalTargets });
+                                                setFirstDestinationAdded(false); // Habilitar a edição
+                                                setProbabilityErrors({});
+                                              } else {
+                                                // Nenhum destino restante
+                                                updateChoice(index, { ...choice, targets: [] });
+                                                setFirstDestinationAdded(false);
+                                                setProbabilityErrors({});
+                                              }
+                                            }} >
+                                            <DeleteIcon />
+                                          </IconButton>
+                                        }>
                                         <Grid container spacing={2} sx={{ justifyContent: "flex-end", display: 'flex', alignItems: 'center' }}>
                                           <Grid item md={2}>
                                             <ListItemText
                                               primary={`Destino: ${
                                                 chapters.find((ch) => ch.id === target.targetId)?.title || target.targetId
-                                              }`}
-                                            />
+                                              }`} />
                                           </Grid>
                                           <Grid item md={2}>
-                                          <TextField
-                                            key={targetIndex}
-                                            fullWidth
-                                            label="Chance"
-                                            type="number"
+                                          <TextField key={targetIndex} fullWidth label="Chance" type="number"
                                             value={target.probability}
                                             onFocus={() => setFocusedProbabilityField(targetIndex)}
                                             onBlur={() => setFocusedProbabilityField(null)}
@@ -807,25 +773,15 @@ const BookEditor: React.FC = () => {
                                       <Box key={id} sx={{ mb: 2 }}> {/* Um Box para cada requisito */}
                                         <FormControlLabel
                                           control={<Checkbox checked={req.isHidden} onChange={(e) => updateRequirement(index, id, req.value, req.isCost, e.target.checked)} />}
-                                          label="Oculto?"
-                                        />
+                                          label="Oculto?" />
                                         <Box sx={{ display: "flex", alignItems: "center" }}> {/* Box para alinhar os outros elementos */}
-                                          <TextField
-                                            label="Recurso"
-                                            value={req.key}
-                                            sx={{ width: "300px", mr: 1 }}
-                                            onChange={(e) => updateRequirementKey(index, id, e.target.value)}
-                                          />
-                                          <TextField
-                                            label="Valor"
-                                            value={req.value}
-                                            sx={{ width: "100px", mr: 1 }}
-                                            onChange={(e) => updateRequirement(index, id, e.target.value, req.isCost, req.isHidden)}
-                                          />
+                                          <TextField label="Recurso" value={req.key} sx={{ width: "300px", mr: 1 }}
+                                            onChange={(e) => updateRequirementKey(index, id, e.target.value)} />
+                                          <TextField label="Valor" value={req.value} sx={{ width: "100px", mr: 1 }}
+                                            onChange={(e) => updateRequirement(index, id, e.target.value, req.isCost, req.isHidden)} />
                                           <FormControlLabel
                                             control={<Checkbox checked={req.isCost} onChange={(e) => updateRequirement(index, id, req.value, e.target.checked, req.isHidden)} />}
-                                            label="Consumir"
-                                          />
+                                            label="Consumir" />
                                           <IconButton onClick={() => removeRequirementFromChoice(index, id)}>
                                             <DeleteIcon color="error" />
                                           </IconButton>
@@ -850,46 +806,46 @@ const BookEditor: React.FC = () => {
                   </Box>
                 )}
 
-                {/* Aba On Start */}
+                {/* Gatilhos do capítulo */}
                 {selectedTab === 1 && (
-                    <Box sx={{ mt: 3 }}>
-                        {selectedChapter.on_start && (
-                            Object.entries(selectedChapter.on_start).map(([key, value], index) => (
-                              <Box key={`<span class="math-inline">\{key\}\-</span>{index}`} sx={{ mb: 2 }}> {/* Adiciona margem inferior para separar os itens */}
-                                <FormControlLabel
-                                  control={
-                                    <Checkbox
-                                      checked={isOnStartHidden(key)}
-                                      onChange={(e) => handleOnStartHiddenChange(key, e.target.checked)}
-                                    />
-                                  }
-                                  label="Oculto?"
+                  <Box sx={{ mt: 3 }}>
+                      {selectedChapter.on_start && (
+                          Object.entries(selectedChapter.on_start).map(([key, value], index) => (
+                            <Box key={`<span class="math-inline">\{key\}\-</span>{index}`} sx={{ mb: 2 }}> {/* Adiciona margem inferior para separar os itens */}
+                              <FormControlLabel
+                                control={
+                                  <Checkbox
+                                    checked={isOnStartHidden(key)}
+                                    onChange={(e) => handleOnStartHiddenChange(key, e.target.checked)}
+                                  />
+                                }
+                                label="Oculto?"
+                              />
+                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <TextField
+                                  label="Recurso"
+                                  value={key}
+                                  onChange={(e) => updateOnStartKey(key, e.target.value, value)}
+                                  sx={{ mr: 1, width: "300px" }}
                                 />
-                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                  <TextField
-                                    label="Recurso"
-                                    value={key}
-                                    onChange={(e) => updateOnStartKey(key, e.target.value, value)}
-                                    sx={{ mr: 1, width: "300px" }}
-                                  />
-                                  <TextField
-                                    label="Valor"
-                                    value={value}
-                                    onChange={(e) => updateOnStartValue(key, e.target.value)}
-                                    sx={{ mr: 1 }}
-                                  />
+                                <TextField
+                                  label="Valor"
+                                  value={value}
+                                  onChange={(e) => updateOnStartValue(key, e.target.value)}
+                                  sx={{ mr: 1 }}
+                                />
 
-                                  <IconButton onClick={() => removeOnStart(key)}>
-                                      <DeleteIcon color="error" />
-                                  </IconButton>
-                                </Box>
+                                <IconButton onClick={() => removeOnStart(key)}>
+                                    <DeleteIcon color="error" />
+                                </IconButton>
                               </Box>
-                          ))
-                        )}
-                        <Button variant="outlined" sx={{ mt: 1 }} onClick={addOnStart}>
-                            ➕ Adicionar Gatilho
-                        </Button>
-                    </Box>
+                            </Box>
+                        ))
+                      )}
+                      <Button variant="outlined" sx={{ mt: 1 }} onClick={addOnStart}>
+                          ➕ Adicionar Gatilho
+                      </Button>
+                  </Box>
                 )}
               </>
             ) : (
