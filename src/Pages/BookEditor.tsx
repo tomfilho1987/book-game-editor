@@ -455,6 +455,18 @@ const BookEditor: React.FC = () => {
     reader.readAsText(file);
   };
    
+  const validarExtensoesImagens = (chapters: Chapter[]): { chapterTitle: string; imageName: string }[] => {
+    const erros: { chapterTitle: string; imageName: string }[] = [];
+    for (const chapter of chapters) {
+      if (chapter.image && chapter.image !== "") {
+        const lowerCaseImageName = chapter.image.toLowerCase();
+        if (!lowerCaseImageName.endsWith(".jpg") && !lowerCaseImageName.endsWith(".png")) {
+          erros.push({ chapterTitle: chapter.title, imageName: chapter.image });
+        }
+      }
+    }
+    return erros;
+  };
   /**
    * @function handleSaveClick
    * @description Abre o popup de confirmação para salvar o arquivo.
@@ -462,6 +474,22 @@ const BookEditor: React.FC = () => {
   const handleSaveClick = () => {
     if (chapters.length === 0) {
       alert("Nenhum capítulo criado. O arquivo JSON não será gerado.");
+      return;
+    }
+
+    const errosDeImagem = validarExtensoesImagens(chapters);
+
+    if (errosDeImagem.length > 0) {
+      const errorMessage = errosDeImagem
+        .map(item => `O nome da imagem "${item.imageName}" no capítulo "${item.chapterTitle}" deve ter a extensão .jpg ou .png.`)
+        .join("\n");
+
+      setDialogInfo({
+        ...dialogInfo,
+        open: true,
+        message: errorMessage,
+      });
+
       return;
     }
 
