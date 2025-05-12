@@ -409,7 +409,7 @@ const BookEditor: React.FC = () => {
             const chapterData = chapterDataUnknown as IChapterDataJSON;
             return {
               id: Number(id),
-              title: `Capítulo ${id}`,
+              title: `${id}`,
               text: chapterData.text,
               choices: chapterData.choices.map((choiceJSON: IChoiceJSON) => {
                 const targetsWithProbability = choiceJSON.targets?.length > 0 && typeof choiceJSON.targets[0] === 'object'
