@@ -57,6 +57,7 @@ const BookEditor: React.FC = () => {
   const chapterListRef = useRef<HTMLDivElement>(null);
   const [dialogAlert, setDialogAlert] = React.useState<ICustomDialogAlert>({ open: false, title: 'Confirma Operação?', message: '', param: '' })
   const [dialogInfo, setDialogInfo] = React.useState<ICustomDialogAlert>({ open: false, title: 'Aviso', message: '', param: '' })
+  const [deleteChapterDialog, setDeleteChapterDialog] = React.useState<ICustomDialogAlert>({ open: false, title: '', message: '', param: 0 })
   const [deleteChoiceDialog, setDeleteChoiceDialog] = React.useState<ICustomDialogAlert>({ open: false, title: 'Confirma Exclusão?', message: '', param: 0 })
   const [onStartHiddenStatus, setOnStartHiddenStatus] = useState<Record<number, Record<string, boolean>>>({});
   const [firstDestinationAdded, setFirstDestinationAdded] = useState(false);
@@ -70,6 +71,10 @@ const BookEditor: React.FC = () => {
   const currentChoice = currentChapter?.choices[currentChoiceIndex];
   const [focusedProbabilityField, setFocusedProbabilityField] = useState<number | null>(null);
   const [lastModifiedFieldBelow100, setLastModifiedFieldBelow100] = useState<number | null>(null);
+  /** Novo estado para controlar o erro de validação do título */
+  const [titleError, setTitleError] = useState<string | null>(null);
+  /** Novo estado para controlar o erro de validação do texto */
+  const [textError, setTextError] = useState<string | null>(null);
   /** Estado para controlar a aba principal selecionada (0: Gatilhos, 1: Escolhas). */
   const [selectedTab, setSelectedTab] = useState(0); // Inicialmente, Escolhas estará selecionada
 
@@ -115,7 +120,7 @@ const BookEditor: React.FC = () => {
    * @returns {boolean} - True se o item estiver marcado como oculto, false caso contrário.
    */
   const isOnStartHidden = (key: string): boolean => {
-  return onStartHiddenStatus[selectedChapter?.id || -1]?.[key] || false;
+    return onStartHiddenStatus[selectedChapter?.id || -1]?.[key] || false;
   };
 
   /**
@@ -164,12 +169,27 @@ const BookEditor: React.FC = () => {
 
   /**
    * @function handleChapterChange
-   * @description Atualiza o campo especificado do capítulo selecionado.
+   * @description Atualiza o campo especificado do capítulo selecionado e realiza validação no título e texto.
    * @param {keyof Chapter} field - O campo do capítulo a ser atualizado.
    * @param {any} value - O novo valor para o campo.
    */
   const handleChapterChange = (field: keyof Chapter, value: any) => {
     if (!selectedChapter) return;
+
+    if (field === 'title') {
+      if (value.length < 3) {
+        setTitleError('O título deve ter no mínimo 3 caracteres para ser salvo.');
+      } else if (titleError) { // Limpa o erro se o campo for corrigido
+        setTitleError(null);
+      }
+    } else if (field === 'text') {
+      if (!value || value.trim() === '') {
+        setTextError('O texto do capítulo é obrigatório.');
+      } else if (textError) { // Limpa o erro se o campo for corrigido
+        setTextError(null);
+      }
+    }
+
     const updatedChapter = { ...selectedChapter, [field]: value };
     setSelectedChapter(updatedChapter);
     setChapters(
@@ -485,12 +505,17 @@ const BookEditor: React.FC = () => {
     setDialogInfo({ ...dialogInfo, open: false, message: '' })
   };
 
+  /**
+   * @function removeChoice
+   * @description Remove uma escolha da lista de escolhas de um capítulo com base no seu ID.
+   * @param {number} choiceIndex - O ID da escolha a ser removida.
+   */
   const removeChoice = (choiceIndex: number) => {
     if (!selectedChapter) return;
-  
+
     const updatedChoices = selectedChapter.choices.filter((_, index) => index !== choiceIndex);
     handleChapterChange("choices", updatedChoices);
-  
+
     // Se a escolha removida era a atualmente selecionada para edição,
     // resetamos o índice para evitar erros.
     if (currentChoiceIndex === choiceIndex && updatedChoices.length > 0) {
@@ -500,6 +525,43 @@ const BookEditor: React.FC = () => {
     } else if (currentChoiceIndex > choiceIndex) {
       setCurrentChoiceIndex(prevIndex => prevIndex - 1);
     }
+  };
+
+/**
+   * @function removeChapter
+   * @description Remove um capítulo da lista de capítulos com base no seu ID e seleciona o capítulo vizinho apropriado.
+   * @param {number} chapterIdToRemove - O ID do capítulo a ser removido.
+   */
+  const removeChapter = (chapterIdToRemove: number) => {
+    const indexToRemove = chapters.findIndex(chapter => chapter.id === chapterIdToRemove);
+    const updatedChapters = chapters.filter(chapter => chapter.id !== chapterIdToRemove);
+    setChapters(updatedChapters);
+
+    // Lógica para selecionar o próximo/anterior capítulo
+    if (selectedChapter?.id === chapterIdToRemove) {
+      if (updatedChapters.length > 0) {
+        if (indexToRemove === 0) {
+          // Caso 1: Primeiro capítulo removido, seleciona o próximo
+          setSelectedChapter(updatedChapters[0]);
+        } else if (indexToRemove === chapters.length - 1) {
+          // Caso 2: Último capítulo removido, seleciona o anterior
+          setSelectedChapter(updatedChapters[updatedChapters.length - 1]);
+        } else {
+          // Caso 3: Capítulo do meio removido, seleciona o anterior
+          setSelectedChapter(updatedChapters[indexToRemove - 1]);
+        }
+      } else {
+        // Se não há mais capítulos após a remoção
+        setSelectedChapter(null);
+      }
+    }
+  };
+
+  const handleConfirmDeleteChapter = () => {
+    if (deleteChapterDialog.param !== null) {
+      removeChapter(Number(deleteChapterDialog.param));
+    }
+    setDeleteChapterDialog({ ...deleteChapterDialog, open: false, param: 0 });
   };
 
   const handleConfirmDeleteChoice = () => {
@@ -525,7 +587,7 @@ const BookEditor: React.FC = () => {
                     </ListItemButton>
                     <IconButton edge="end" aria-label="delete" 
                       onClick={() => 
-                        setDialogAlert({ 
+                        setDeleteChapterDialog({ 
                           open: true, 
                           title: 'Remover Capítulo?', 
                           message: `Deseja remover o capítulo "${ch.title}"?`, 
@@ -565,14 +627,24 @@ const BookEditor: React.FC = () => {
         <Grid2 size={"grow"}>
           {/* Conteúdo principal */}
           <Box component="main" sx={{ flexGrow: 1, bgcolor: "background.default", p: 3 }} >
-
+            <Typography variant="caption" color="textSecondary" sx={{ mb: 1 }}>
+              Os campos com (*) são obrigatórios!
+            </Typography>
             {selectedChapter ? (
               <>
-                <TextField label="Capítulo" value={selectedChapter.title} fullWidth margin="normal"
-                  onChange={(e) => handleChapterChange("title", e.target.value)} />
-                <TextField label="Texto do Capítulo" value={selectedChapter.text} fullWidth margin="normal" multiline rows={4}
-                  onChange={(e) => handleChapterChange("text", e.target.value)} />
-                <TextField label="Nome da Imagem (jpg ou png)" value={selectedChapter.image || ""} fullWidth margin="normal"
+                <TextField required label="Capítulo" value={selectedChapter.title} fullWidth margin="normal"
+                  onChange={(e) => handleChapterChange("title", e.target.value)}
+                  error={!!titleError} // Indica se há um erro de validação
+                  helperText={titleError} // Exibe a mensagem de erro
+                  sx={{ mb: 2 }}
+                />
+                <TextField required label="Texto do Capítulo" value={selectedChapter.text} fullWidth margin="normal" multiline rows={4}
+                  onChange={(e) => handleChapterChange("text", e.target.value)}
+                  error={!!textError}
+                  helperText={textError}
+                  sx={{ mb: 2 }}
+                />
+                <TextField label="Nome da Imagem (.jpg ou .png)" value={selectedChapter.image || ""} fullWidth margin="normal"
                   onChange={(e) => { handleChapterChange("image", e.target.value); }}
                   onBlur={() => {
                     // Validação quando o campo perde o foco
@@ -859,6 +931,10 @@ const BookEditor: React.FC = () => {
           <CustomAlertDialog open={dialogAlert.open} title={dialogAlert.title} message={dialogAlert.message} handleClickYes={clearHistory}
               handleClickNo={() => { setDialogAlert({ ...dialogAlert, open: false }) }}
               handleClickClose={() => { setDialogAlert({ ...dialogAlert, open: false }) }}
+          />
+          <CustomAlertDialog open={deleteChapterDialog.open} title={deleteChapterDialog.title} message={deleteChapterDialog.message} handleClickYes={handleConfirmDeleteChapter}
+              handleClickNo={() => { setDeleteChapterDialog({ ...deleteChapterDialog, open: false }) }}
+              handleClickClose={() => { setDeleteChapterDialog({ ...deleteChapterDialog, open: false }) }}
           />
           <CustomAlertDialog open={deleteChoiceDialog.open} title={deleteChoiceDialog.title} message={deleteChoiceDialog.message} handleClickYes={handleConfirmDeleteChoice}
               handleClickNo={() => { setDeleteChoiceDialog({ ...deleteChoiceDialog, open: false }) }}
