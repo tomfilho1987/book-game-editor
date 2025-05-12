@@ -613,13 +613,13 @@ const BookEditor: React.FC = () => {
               <Button variant="outlined" onClick={confirmationDialog} fullWidth startIcon={<AddIcon />}>
                 Limpar
               </Button>
-              <Divider sx={{ my: 2 }} />
+              {/* <Divider sx={{ my: 2 }} />
               <input type="file" accept=".json" onChange={loadJsonFile} style={{ display: "none" }} id="load-json-file" />
               <label htmlFor="load-json-file">
                 <Button variant="outlined" component="span" fullWidth startIcon={<FileUploadIcon />}>
                   Carregar
                 </Button>
-              </label>
+              </label> */}
             </Box>
           </Box>
         </Grid2>
