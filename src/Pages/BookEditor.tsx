@@ -70,9 +70,6 @@ const BookEditor: React.FC = () => {
   const currentChoice = currentChapter?.choices[currentChoiceIndex];
   const [focusedProbabilityField, setFocusedProbabilityField] = useState<number | null>(null);
   const [lastModifiedFieldBelow100, setLastModifiedFieldBelow100] = useState<number | null>(null);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [modalMessage, setModalMessage] = useState('');
-
   /** Estado para controlar a aba principal selecionada (0: Gatilhos, 1: Escolhas). */
   const [selectedTab, setSelectedTab] = useState(0); // Inicialmente, Escolhas estará selecionada
 
@@ -775,8 +772,12 @@ const BookEditor: React.FC = () => {
                                           control={<Checkbox checked={req.isHidden} onChange={(e) => updateRequirement(index, id, req.value, req.isCost, e.target.checked)} />}
                                           label="Oculto?" />
                                         <Box sx={{ display: "flex", alignItems: "center" }}> {/* Box para alinhar os outros elementos */}
-                                          <TextField label="Recurso" value={req.key} sx={{ width: "300px", mr: 1 }}
-                                            onChange={(e) => updateRequirementKey(index, id, e.target.value)} />
+                                          <TextField
+                                            label="Recurso"
+                                            value={req.key}
+                                            sx={{ width: "300px", mr: 1 }}
+                                            onChange={(e) => updateRequirementKey(index, id, e.target.value)}
+                                          />
                                           <TextField label="Valor" value={req.value} sx={{ width: "100px", mr: 1 }}
                                             onChange={(e) => updateRequirement(index, id, e.target.value, req.isCost, req.isHidden)} />
                                           <FormControlLabel

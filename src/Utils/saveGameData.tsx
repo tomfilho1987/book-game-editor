@@ -71,9 +71,11 @@ export const saveJsonFile = (
                 if (choice.requirement) {
                     Object.values(choice.requirement).forEach(req => {
                         if (req.isCost) {
-                            costsObject[req.key] = req.value;
+                            const numericValue = Number(req.value);
+                            costsObject[req.key] = isNaN(numericValue) ? req.value : numericValue;
                         } else {
-                            requirementsObject[req.key] = req.value;
+                            const numericValue = Number(req.value);
+                            requirementsObject[req.key] = isNaN(numericValue) ? req.value : numericValue;
                         }
                     });
                 }
