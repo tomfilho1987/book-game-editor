@@ -5,7 +5,7 @@
  * @date [Data de Criação]
  * @version 1.0
  */
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Box, Button, Checkbox, Divider, IconButton, FormControlLabel, List, ListItem, ListItemButton, ListItemText, Tab, Tabs, TextField, Typography,
     Autocomplete, createFilterOptions, Accordion, AccordionSummary, AccordionDetails, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, 
     Grid2, Grid} from "@mui/material";
@@ -77,6 +77,26 @@ const BookEditor: React.FC = () => {
   const [textError, setTextError] = useState<string | null>(null);
   /** Estado para controlar a aba principal selecionada (0: Gatilhos, 1: Escolhas). */
   const [selectedTab, setSelectedTab] = useState(0); // Inicialmente, Escolhas estará selecionada
+
+  const recursosUsados = useMemo(() => extrairRecursosDeChoices(chapters), [chapters]);
+
+  type RecursoOption = { key: string; label: string; };
+
+  function extrairRecursosDeChoices(chapters: Chapter[]): RecursoOption[] {
+    const map = new Map<string, boolean>();
+
+    chapters.forEach(ch => {
+      ch.choices.forEach(choice => {
+        if (choice.requirement) {
+          Object.values(choice.requirement).forEach(({ key, isHidden }) => {
+            map.set(key, map.get(key) || isHidden); // marca como oculto se algum for oculto
+          });
+        }
+      });
+    });
+
+    return Array.from(map.entries()).map(([key, isHidden]) => ({ key, label: isHidden ? `${key} (Oculto)` : key }));
+  }
 
   const handleTabChange = (event: React.ChangeEvent<{}>, newValue: number) => {
     setSelectedTab(newValue);
@@ -634,8 +654,8 @@ const BookEditor: React.FC = () => {
               <>
                 <TextField required label="Capítulo" value={selectedChapter.title} fullWidth margin="normal"
                   onChange={(e) => handleChapterChange("title", e.target.value)}
-                  error={!!titleError} // Indica se há um erro de validação
-                  helperText={titleError} // Exibe a mensagem de erro
+                  error={!!titleError}
+                  helperText={titleError}
                   sx={{ mb: 2 }}
                 />
                 <TextField required label="Texto do Capítulo" value={selectedChapter.text} fullWidth margin="normal" multiline rows={4}
@@ -647,7 +667,6 @@ const BookEditor: React.FC = () => {
                 <TextField label="Nome da Imagem (.jpg ou .png)" value={selectedChapter.image || ""} fullWidth margin="normal"
                   onChange={(e) => { handleChapterChange("image", e.target.value); }}
                   onBlur={() => {
-                    // Validação quando o campo perde o foco
                     if (selectedChapter.image &&
                           selectedChapter.image !== "" &&
                             !selectedChapter.image.toLowerCase().endsWith(".jpg") &&
@@ -844,11 +863,48 @@ const BookEditor: React.FC = () => {
                                           control={<Checkbox checked={req.isHidden} onChange={(e) => updateRequirement(index, id, req.value, req.isCost, e.target.checked)} />}
                                           label="Oculto?" />
                                         <Box sx={{ display: "flex", alignItems: "center" }}> {/* Box para alinhar os outros elementos */}
-                                          <TextField
-                                            label="Recurso"
-                                            value={req.key}
+                                          <Autocomplete
+                                            freeSolo
+                                            disableClearable
+                                            options={recursosUsados}
+                                            getOptionLabel={(option) => {
+                                              if (typeof option === "string") return option;
+                                              return option.label;
+                                            }}
+                                            filterOptions={(options, state) => {
+                                              const input = state.inputValue.trim().toLowerCase();
+                                              if (input.length < 3) return [];
+
+                                              return options.filter(opt =>
+                                                opt.key.toLowerCase().includes(input) &&
+                                                opt.key.toLowerCase() !== input
+                                              );
+                                            }}
+                                            value={req.key} // <-- usa diretamente o string
+                                            onChange={(_, newValue) => {
+                                              if (typeof newValue === "string") {
+                                                updateRequirementKey(index, id, newValue);
+                                              } else if (newValue && typeof newValue === "object") {
+                                                updateRequirementKey(index, id, newValue.key);
+                                              }
+                                            }}
+                                            onInputChange={(_, newInputValue) => {
+                                              updateRequirementKey(index, id, newInputValue);
+                                            }}
+                                            renderOption={(props, option) => (
+                                              <li {...props} key={option.key}>
+                                                {option.label}
+                                              </li>
+                                            )}
                                             sx={{ width: "300px", mr: 1 }}
-                                            onChange={(e) => updateRequirementKey(index, id, e.target.value)}
+                                            renderInput={(params) => (
+                                              <TextField {...params} label="Recurso" />
+                                            )}
+                                            isOptionEqualToValue={(option, value) => {
+                                              // Garante comparação correta entre opção e valor atual
+                                              if (typeof value === "string") return option.key === value;
+                                              return option.key === value.key;
+                                            }}
                                           />
                                           <TextField label="Valor" value={req.value} sx={{ width: "100px", mr: 1 }}
                                             onChange={(e) => updateRequirement(index, id, e.target.value, req.isCost, req.isHidden)} />
