@@ -12,7 +12,6 @@ import { Box, Button, Checkbox, Divider, IconButton, FormControlLabel, List, Lis
 import DeleteIcon from "@mui/icons-material/Delete";
 import SaveIcon from "@mui/icons-material/Save";
 import AddIcon from "@mui/icons-material/Add";
-import FileUploadIcon from '@mui/icons-material/FileUpload';
 import { Chapter } from "../Types/Chapter";
 import { Choice } from "../Types/Choice";
 import { IChapterOption } from "../Interfaces/IChapterOption";
@@ -367,9 +366,11 @@ const BookEditor: React.FC = () => {
    * @description Adiciona um novo capítulo à lista de capítulos.
    */
   const addChapter = () => {
+    const maxId = chapters.reduce((max, chapter) => Math.max(max, chapter.id), 0);
+  
     const newChapter: Chapter = {
-      id: chapters.length + 1,
-      title: `Capítulo ${chapters.length + 1}`,
+      id: maxId + 1,
+      title: `Capítulo ${maxId + 1}`,
       text: "",
       choices: [],
     };
