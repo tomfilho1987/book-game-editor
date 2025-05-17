@@ -548,7 +548,7 @@ const BookEditor: React.FC = () => {
     }
   };
 
-/**
+  /**
    * @function removeChapter
    * @description Remove um capítulo da lista de capítulos com base no seu ID e seleciona o capítulo vizinho apropriado.
    * @param {number} chapterIdToRemove - O ID do capítulo a ser removido.
