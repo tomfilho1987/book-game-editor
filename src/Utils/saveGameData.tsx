@@ -84,7 +84,7 @@ export const saveJsonFile = (
                 }
 
                 const orderedChoice: any = {
-                    targets: choice.targets.length > 0 ? (choice.targets.length === 1 ? [getChapterTitleById(choice.targets[0].targetId)] : (() => {
+                    targets: choice.targets.length === 0 ? [""] : (choice.targets.length === 1 ? [getChapterTitleById(choice.targets[0].targetId)] : (() => {
                         const probabilityMap: Record<string, number> = {};
                         choice.targets.forEach(t => {
                             const targetTitle = getChapterTitleById(t.targetId);
@@ -110,7 +110,7 @@ export const saveJsonFile = (
                         }
                         targetsArray.sort(() => Math.random() - 0.5);
                         return targetsArray;
-                    })()) : undefined,
+                    })()),
                     text: choice.text,
                     ...(Object.keys(costsObject).length > 0 && { cost: costsObject }),
                     ...(Object.keys(requirementsObject).length > 0 && { requirement: requirementsObject }),
