@@ -26,6 +26,7 @@ import { saveJsonFile } from "../Utils/saveGameData";
 import { validarProbabilidades } from "../Utils/validarProbabilidades";
 import validateChoices from "../Utils/validateChoices";
 import GameSetup from "./GameSetup";
+import validateStartChapter from "../Utils/validateStartChapter";
 
 const initialData: Chapter[] = JSON.parse(localStorage.getItem("bookData") || "[]") || [
   {
@@ -39,16 +40,12 @@ const initialData: Chapter[] = JSON.parse(localStorage.getItem("bookData") || "[
   },
 ];
 
-interface ChapterEditorProps {
-  chapter: Chapter;
-  onChapterChange: (propertyName: keyof Chapter, value: any) => void;
-}
-
 /**
  * @function BookEditor
  * @description Componente principal para editar os capítulos do livro-jogo.
  * @returns {JSX.Element} Elemento JSX contendo o editor de capítulos.
  */
+//const BookEditor: React.FC = () => {
 const BookEditor: React.FC = () => {
   /** Estado para armazenar a lista de capítulos. */
   const [chapters, setChapters] = useState<Chapter[]>(initialData);
@@ -195,14 +192,6 @@ const BookEditor: React.FC = () => {
       setProbabilityValidationMessage(null);
     }
   }, [currentChapterIndex, currentChoice?.targets]);
-
-  // useEffect(() => {
-  //   onChapterChange('isStartChapter', isStart);
-  // }, [isStart, onChapterChange]);
-
-  // const handleChangeIsStart = (event: React.ChangeEvent<HTMLInputElement>) => {
-  //   setIsStart(event.target.checked);
-  // };
 
   /**
    * @function handleChapterChange
@@ -522,9 +511,14 @@ const BookEditor: React.FC = () => {
     }
 
     const validationResultEscolha = validateChoices(chapters);
-
     if (!validationResultEscolha.isValid) {
       setDialogInfo({ ...dialogInfo, open: true, message: validationResultEscolha.message });
+      return;
+    }
+
+    const startChapterValidationResult = validateStartChapter(chapters);
+    if (!startChapterValidationResult.isValid) {
+      setDialogInfo({ ...dialogInfo, open: true, message: startChapterValidationResult.message });
       return;
     }
 
@@ -667,15 +661,22 @@ const BookEditor: React.FC = () => {
           </Tabs>
           {tab === 0 && 
             <Box component="main" sx={{ flexGrow: 1, bgcolor: "background.default", p: 3 }} >
-              {/* <FormControlLabel
-                control={<Checkbox checked={false} onChange={handleChangeIsStart} name="isStartChapter" />}
-                label="Capítulo Inicial"
-              /> */}
-              <Typography variant="caption" color="textSecondary" sx={{ mb: 1 }}>
-                Os campos com (*) são obrigatórios!
-              </Typography>
+
               {selectedChapter ? (
                 <>
+                  <FormControlLabel
+                    control={<Checkbox
+                      checked={selectedChapter?.isStartChapter || false}
+                      onChange={(e) => handleChapterChange('isStartChapter', e.target.checked)}
+                      name={`isStartChapter-${selectedChapter?.id}`}
+                    />}
+                    label="Capítulo Inicial"
+                  />
+                  <br />
+                  <Typography variant="caption" color="textSecondary" sx={{ mb: 1 }}>
+                    Os campos com (*) são obrigatórios!
+                  </Typography>
+
                   <TextField required label="Capítulo" value={selectedChapter.title} fullWidth margin="normal"
                     onChange={(e) => handleChapterChange("title", e.target.value)}
                     error={!!titleError}
