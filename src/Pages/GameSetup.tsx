@@ -1,30 +1,72 @@
 import React, { useEffect, useState } from 'react';
-import { Box, TextField, Button, Typography, IconButton } from '@mui/material';
+import { Box, TextField, Button, Typography, IconButton, FormControlLabel, Checkbox } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
-import { ICondition, IGameConfig } from '../Interfaces/IGameConfig';
+import { ICondition, IGameConfig, IResource } from '../Interfaces/IGameConfig';
+import SaveIcon from "@mui/icons-material/Save";
 
+/**
+ * @interface IGameConfig
+ * @description Define a estrutura da configuração do jogo.
+ */
 const GameSetup: React.FC = () => {
+     /**
+     * @state config
+     * @description Estado principal que armazena a configuração completa do jogo,
+     * incluindo recursos padrão e condições.
+     */
     const [config, setConfig] = useState<IGameConfig>({
         default_resources: [{ key: '', value: '' }],
-        conditions: {}, // Inicializa conditions como um objeto vazio
+        conditions: {},
     });
+    /**
+     * @state conditionList
+     * @description Estado auxiliar para gerenciar a lista de condições na UI,
+     * facilitando a manipulação individual antes de serem formatadas
+     * no objeto 'conditions' da configuração.
+     */
     const [conditionList, setConditionList] = useState<ICondition[]>([
         { key: '', min: '', trigger: '' },
     ]);
 
-    const handleResourceChange = (index: number, name: 'key' | 'value', value: string) => {
+    /**
+     * @function handleResourceChange
+     * @description Atualiza um campo específico de um recurso no estado `config.default_resources`.
+     * @param {number} index - O índice do recurso na lista a ser atualizado.
+     * @param {'key' | 'value' | 'isHidden'} name - O nome da propriedade do recurso a ser modificada.
+     * @param {string | boolean} value - O novo valor da propriedade.
+     */
+    const handleResourceChange = (index: number, name: 'key' | 'value' | 'isHidden', value: string | boolean) => {
         const updatedResources = [...config.default_resources];
-        updatedResources[index] = { ...updatedResources[index], [name]: name === 'value' ? Number(value) : value };
+        const currentResource = { ...updatedResources[index] };
+
+        if (name === 'value') {
+            currentResource[name] = Number(value); // Converte para número
+        } else if (name === 'isHidden') {
+            currentResource[name] = value as boolean; // Atribui o booleano diretamente
+        } else {
+            currentResource[name] = value as string; // Para 'key'
+        }
+
+        updatedResources[index] = currentResource;
         setConfig({ ...config, default_resources: updatedResources });
     };
 
+    /**
+     * @function handleAddResource
+     * @description Adiciona um novo recurso vazio à lista de `default_resources`.
+     */
     const handleAddResource = () => {
         setConfig({
             ...config,
-            default_resources: [...config.default_resources, {}],
+            default_resources: [...config.default_resources, { key: '', value: '', isHidden: false }],
         });
     };
 
+    /**
+     * @function handleRemoveResource
+     * @description Remove um recurso da lista de `default_resources` pelo seu índice.
+     * @param {number} index - O índice do recurso a ser removido.
+     */
     const handleRemoveResource = (index: number) => {
         const updatedResources = config.default_resources.filter((_, i) => i !== index);
         setConfig({ ...config, default_resources: updatedResources });
@@ -61,20 +103,30 @@ const GameSetup: React.FC = () => {
         setConditionList(updatedList);
     };
 
-    const [newCondition, setNewCondition] = useState<{ key: string; min: string; trigger: string }>({ key: '', min: '', trigger: '' });
-
+    /**
+     * @function generateJsonFile
+     * @description Formata os dados de `default_resources` e `conditions` e gera um arquivo JSON
+     * para download. Adiciona '#' ao 'key' do recurso se 'isHidden' for true.
+     */
     const generateJsonFile = () => {
-        const resourcesFormatted = config.default_resources.reduce((acc: Record<string, string>, resource) => {
-            if (resource && typeof resource.key === 'string' && resource.key.trim() !== '') {
-                acc[resource.key.trim()] = resource.value || "";
+        const resourcesFormatted = config.default_resources.reduce((acc: Record<string, string | number>, resource) => {
+            // Verifica se a chave existe e não está vazia
+            if (resource.key && resource.key.trim() !== '') {
+                let resourceKey = resource.key.trim();
+                // Adiciona '#' se o recurso estiver marcado como oculto
+                if (resource.isHidden) {
+                    resourceKey = `#${resourceKey}`;
+                }
+                acc[resourceKey] = resource.value || ''; // Usa o valor ou uma string vazia
             }
             return acc;
         }, {});
 
-        const conditionsFormatted = Object.entries(config.conditions).reduce((acc: Record<string, { min: number; trigger: string }>, [key, condition]) => {
-            if (condition && key.trim()) {
-                acc[key.trim()] = {
-                    min: Number(condition.min) || 0, // <-- conversão aqui
+        // Lógica para formatar as condições (mantida do seu código original)
+        const conditionsFormatted = conditionList.reduce((acc: Record<string, { min: number; trigger: string }>, condition) => {
+            if (condition.key && condition.key.trim()) {
+                acc[condition.key.trim()] = {
+                    min: Number(condition.min) || 0,
                     trigger: condition.trigger
                 };
             }
@@ -95,10 +147,13 @@ const GameSetup: React.FC = () => {
         document.body.removeChild(link);
     };
 
-    useEffect(() => {
-        console.log('Estado config atualizado:', JSON.stringify(config.default_resources, null, 2));
-    }, [config.default_resources]);
-
+    /**
+     * @useEffect
+     * @description Efeito colateral para manter `config.conditions` sincronizado
+     * com `conditionList` para uso interno ou depuração.
+     * (Se a formatação final é feita apenas no `generateJsonFile`, este `useEffect`
+     * pode ser removido ou modificado conforme a necessidade).
+     */
     useEffect(() => {
         const conditionsObj: Record<string, ICondition> = {};
         conditionList.forEach(cond => {
@@ -110,36 +165,48 @@ const GameSetup: React.FC = () => {
                 };
             }
         });
-        setConfig(prev => ({ ...prev, conditions: conditionsObj }));
     }, [conditionList]);
 
     return (
         <Box sx={{ p: 3, mt: 1 }}>
             <Typography variant="h6" gutterBottom>Recursos</Typography>
             {config.default_resources.map((resource, index) => (
-                <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <TextField
-                        label="Recurso"
-                        value={resource.key || ""}
-                        sx={{ mr: 1 }}
-                        onChange={(e) => handleResourceChange(index, 'key', e.target.value)}
+                <Box key={index} sx={{ mb: 2 }}>
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={resource.isHidden || false}
+                                onChange={(e) => handleResourceChange(index, 'isHidden', e.target.checked)}
+                            />
+                        }
+                        label="Oculto?"
+                        sx={{ mb: 0.5 }} // Pequena margem abaixo do checkbox
                     />
-                    <TextField
-                        label="Valor"
-                        value={resource.value || ""}
-                        sx={{ mr: 1 }}
-                        onChange={(e) => handleResourceChange(index, 'value', e.target.value)}
-                    />
-                    {index === config.default_resources.length - 1 && (
-                        <Button variant="outlined" onClick={handleAddResource} sx={{ mr: 1 }}>
-                            ➕ Adicionar Recurso
-                        </Button>
-                    )}
-                    {config.default_resources.length > 1 && (
-                        <IconButton onClick={() => handleRemoveResource(index)}>
-                            <DeleteIcon />
-                        </IconButton>
-                    )}
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <TextField
+                            label="Recurso"
+                            value={resource.key || ""}
+                            sx={{ mr: 1 }}
+                            onChange={(e) => handleResourceChange(index, 'key', e.target.value)}
+                        />
+                        <TextField
+                            label="Valor"
+                            value={resource.value || ""}
+                            sx={{ mr: 1 }}
+                            onChange={(e) => handleResourceChange(index, 'value', e.target.value)}
+                        />
+                        {index === config.default_resources.length - 1 && (
+                            <Button variant="outlined" onClick={handleAddResource} sx={{ mr: 1 }}>
+                                ➕ Adicionar Recurso
+                            </Button>
+                        )}
+                        {config.default_resources.length > 1 && (
+                            <IconButton onClick={() => handleRemoveResource(index)}>
+                                <DeleteIcon />
+                            </IconButton>
+                        )}
+                    </Box>
                 </Box>
             ))}
 
@@ -177,8 +244,8 @@ const GameSetup: React.FC = () => {
                 </Box>
             ))}
             <Box>
-                <Button variant="contained" onClick={generateJsonFile} sx={{ mt: 3 }}>
-                    📥 Baixar JSON
+                <Button variant="contained" onClick={generateJsonFile} startIcon={<SaveIcon />} sx={{ mt: 3 }}>
+                    Salvar Config
                 </Button>
             </Box>
         </Box>
