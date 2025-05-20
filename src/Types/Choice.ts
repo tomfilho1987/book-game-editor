@@ -20,4 +20,6 @@ export type Choice = {
   requirement?: Record<string, RequirementDetail>;
   /** Um booleano opcional que indica se o Accordion da escolha está expandido (true) ou recolhido (false) */
   expanded?: boolean;
+  /** Nome da Escolha */
+  name?: string;
 };

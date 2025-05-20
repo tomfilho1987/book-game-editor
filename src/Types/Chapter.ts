@@ -17,4 +17,6 @@ export type Chapter = {
     on_start?: Record<string, number | string>;
     /** Imagem do capítulo. */
     image?: string;
+    /** Indica se este é o capítulo inicial. */
+    isStartChapter?: boolean;
   };

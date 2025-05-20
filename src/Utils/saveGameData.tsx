@@ -112,6 +112,7 @@ export const saveJsonFile = (
                         return targetsArray;
                     })()),
                     text: choice.text,
+                    isStart: chapter.isStartChapter || false,
                     ...(Object.keys(costsObject).length > 0 && { cost: costsObject }),
                     ...(Object.keys(requirementsObject).length > 0 && { requirement: requirementsObject }),
                 };
@@ -129,7 +130,7 @@ export const saveJsonFile = (
             return acc;
         }, {} as Record<string, any>),
         game: "game",
-        start: "start",
+        start: chapters.find(c => c.isStartChapter)?.title || "start", // Define o 'start' do jogo pelo capítulo marcado
     };
 
     let jsonString = JSON.stringify(jsonStructure, null, 2);
