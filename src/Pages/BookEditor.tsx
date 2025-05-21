@@ -33,10 +33,7 @@ const initialData: Chapter[] = JSON.parse(localStorage.getItem("bookData") || "[
     id: 1,
     title: "Capítulo 1",
     text: "Você está em uma floresta sombria...",
-    choices: [
-      { target: 2, text: "Seguir a trilha" },
-      { target: 3, text: "Entrar na caverna" },
-    ],
+    choices: [ { target: 2, text: "Seguir a trilha" }, { target: 3, text: "Entrar na caverna" }, ],
   },
 ];
 
@@ -45,7 +42,6 @@ const initialData: Chapter[] = JSON.parse(localStorage.getItem("bookData") || "[
  * @description Componente principal para editar os capítulos do livro-jogo.
  * @returns {JSX.Element} Elemento JSX contendo o editor de capítulos.
  */
-//const BookEditor: React.FC = () => {
 const BookEditor: React.FC = () => {
   /** Estado para armazenar a lista de capítulos. */
   const [chapters, setChapters] = useState<Chapter[]>(initialData);
@@ -56,7 +52,6 @@ const BookEditor: React.FC = () => {
   /** Estado para armazenar o nome do arquivo JSON carregado. */
   const [loadedFileName, setLoadedFileName] = useState<string | null>(null);
   /** Estado para controlar a abertura do diálogo de salvar. */
-  const [openDialog, setOpenDialog] = useState(false);
   const chapterListRef = useRef<HTMLDivElement>(null);
   const [dialogAlert, setDialogAlert] = React.useState<ICustomDialogAlert>({ open: false, title: 'Confirma Operação?', message: '', param: '' })
   const [dialogInfo, setDialogInfo] = React.useState<ICustomDialogAlert>({ open: false, title: 'Aviso', message: '', param: '' })
@@ -74,9 +69,7 @@ const BookEditor: React.FC = () => {
   const currentChoice = currentChapter?.choices[currentChoiceIndex];
   const [focusedProbabilityField, setFocusedProbabilityField] = useState<number | null>(null);
   const [lastModifiedFieldBelow100, setLastModifiedFieldBelow100] = useState<number | null>(null);
-  const [isStart, setIsStart] = useState(chapters || false);
   const [tab, setTab] = useState(0); // Controla as abas
-
   /** Novo estado para controlar o erro de validação do título */
   const [titleError, setTitleError] = useState<string | null>(null);
   /** Novo estado para controlar o erro de validação do texto */
@@ -726,7 +719,6 @@ const BookEditor: React.FC = () => {
                               }}
                               sx={{ mb: 2 }} >
                               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                {/* Usamos um Box para alinhar o título e o texto da escolha */}
                                 <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
                                   <Typography sx={{ flexShrink: 0 }}>Escolha {index + 1}</Typography>
                                   {choice.text && (
@@ -735,8 +727,6 @@ const BookEditor: React.FC = () => {
                                     </Typography>
                                   )}
                                 </Box>
-                                
-                                {/* Botão de Exclusão permanece como está, mas agora ele será alinhado automaticamente à direita */}
                                 <IconButton aria-label="excluir" sx={{ ml: 'auto' }}
                                   onClick={(event) => {
                                     event.stopPropagation();

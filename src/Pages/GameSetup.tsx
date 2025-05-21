@@ -9,6 +9,7 @@ import SaveIcon from "@mui/icons-material/Save";
  * @description Define a estrutura da configuração do jogo.
  */
 const GameSetup: React.FC = () => {
+    
      /**
      * @state config
      * @description Estado principal que armazena a configuração completa do jogo,
@@ -180,7 +181,7 @@ const GameSetup: React.FC = () => {
                             />
                         }
                         label="Oculto?"
-                        sx={{ mb: 0.5 }} // Pequena margem abaixo do checkbox
+                        sx={{ mb: 0.5 }}
                     />
 
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
