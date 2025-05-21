@@ -39,7 +39,7 @@ export default function CustomAlertDialog({ open, title, message,
         <Button onClick={handleClickNo} color="primary">
           Não
         </Button>
-        <Button onClick={handleClickYes} color="primary" autoFocus>
+        <Button onClick={handleClickYes} variant="contained" color="primary" autoFocus>
           Sim
         </Button>
       </DialogActions>

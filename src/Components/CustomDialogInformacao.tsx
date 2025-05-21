@@ -16,7 +16,7 @@ export default function CustomDialogInformacao({ titulo, abrirModal, handleFecha
                     <DialogContentText id="alert-dialog-description-3" style={{ whiteSpace: 'pre-line' }}> {mensagem} </DialogContentText>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleFechar}> Fechar </Button>
+                    <Button onClick={handleFechar} variant="contained" color="primary"> Fechar </Button>
                 </DialogActions>
             </Dialog>
         </>

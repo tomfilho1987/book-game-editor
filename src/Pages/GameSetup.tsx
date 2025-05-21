@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Box, TextField, Button, Typography, IconButton, FormControlLabel, Checkbox } from '@mui/material';
+import { Box, TextField, Button, Typography, IconButton, FormControlLabel, Checkbox, Modal, Fade, Backdrop } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import { ICondition, IGameConfig, IResource } from '../Interfaces/IGameConfig';
 import SaveIcon from "@mui/icons-material/Save";
+import UploadFileIcon from "@mui/icons-material/UploadFile"; // Ícone para upload
+import CustomDialogInformacao from '../Components/CustomDialogInformacao';
+import { ICustomDialogAlert } from '../Interfaces/ICustomDialogAlert';
 
 /**
  * @interface IGameConfig
@@ -10,6 +13,8 @@ import SaveIcon from "@mui/icons-material/Save";
  */
 const GameSetup: React.FC = () => {
     
+    const [dialogInfo, setDialogInfo] = React.useState<ICustomDialogAlert>({ open: false, title: 'Aviso', message: '', param: '' })
+
      /**
      * @state config
      * @description Estado principal que armazena a configuração completa do jogo,
@@ -168,6 +173,81 @@ const GameSetup: React.FC = () => {
         });
     }, [conditionList]);
 
+    /**
+     * @function handleFileUpload
+     * @description Lida com o upload do arquivo JSON e atualiza o estado.
+     */
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const result = event.target?.result as string;
+                const parsed = JSON.parse(result);
+
+                const resources: IResource[] = Object.entries(parsed.default_resources || {}).map(([key, value]) => {
+                    const isHidden = key.startsWith("#") || key.startsWith("@");
+                    const cleanedKey = isHidden ? key.substring(1) : key;
+
+                    let parsedValue: string | number = '';
+
+                    if (typeof value === 'number' || typeof value === 'string') {
+                        parsedValue = value;
+                    } else {
+                        console.warn(`Valor inválido para o recurso "${cleanedKey}":`, value);
+                        parsedValue = ''; // Ou algum valor padrão
+                    }
+
+                    return {
+                        key: cleanedKey,
+                        value: parsedValue,
+                        isHidden
+                    };
+                });
+
+                const condList: ICondition[] = Object.entries(parsed.conditions || {}).map(([key, cond]) => {
+                    if (
+                        typeof cond === 'object' &&
+                        cond !== null &&
+                        'min' in cond &&
+                        'trigger' in cond &&
+                        (typeof (cond as any).min === 'number' || typeof (cond as any).min === 'string') &&
+                        typeof (cond as any).trigger === 'string'
+                    ) {
+                        return {
+                            key,
+                            min: (cond as any).min.toString(),
+                            trigger: (cond as any).trigger
+                        };
+                    } else {
+                        console.warn(`Condição inválida para a chave "${key}":`, cond);
+                        return {
+                            key,
+                            min: '',
+                            trigger: ''
+                        };
+                    }
+                });
+
+                setConfig({
+                    default_resources: resources,
+                    conditions: parsed.conditions || {}
+                });
+                setConditionList(condList);
+            } catch (err: any) {
+                setDialogInfo({ ...dialogInfo, open: true, message: 'Erro ao processar o arquivo JSON. Verifique o formato do arquivo selecionado.' });
+            }
+        };
+
+        reader.readAsText(file);
+    };
+
+    const handleCloseModal = () => {
+        setDialogInfo({ ...dialogInfo, open: false, message: '' })
+    };
+
     return (
         <Box sx={{ p: 3, mt: 1 }}>
             <Typography variant="h6" gutterBottom>Recursos</Typography>
@@ -244,11 +324,26 @@ const GameSetup: React.FC = () => {
                     )}
                 </Box>
             ))}
-            <Box>
-                <Button variant="contained" onClick={generateJsonFile} startIcon={<SaveIcon />} sx={{ mt: 3 }}>
+            <Box sx={{ display: 'flex', gap: 2, mt: 3 }}> {/* Adiciona um Box para os botões e gap */}
+                <Button
+                    variant="contained"
+                    component="label" // Importante para o input file
+                    startIcon={<UploadFileIcon />}
+                >
+                    Carregar Config
+                    <input
+                        type="file"
+                        accept=".json"
+                        hidden
+                        onChange={handleFileUpload}
+                    />
+                </Button>
+                <Button variant="contained" onClick={generateJsonFile} startIcon={<SaveIcon />}>
                     Salvar Config
                 </Button>
             </Box>
+            <CustomDialogInformacao titulo={dialogInfo.title} abrirModal={dialogInfo.open} handleFechar={handleCloseModal} mensagem={dialogInfo.message} />
+
         </Box>
     );
 };

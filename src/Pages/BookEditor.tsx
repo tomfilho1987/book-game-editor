@@ -647,19 +647,7 @@ const BookEditor: React.FC = () => {
         </Grid2>
         <Divider orientation="vertical" variant="fullWidth" flexItem/>
         <Grid2 size={"grow"}>
-          {/* Conteúdo principal */}
-          <Tabs value={tab} onChange={(_, newIndex) => setTab(newIndex)}>
-              <Tab label="História" />
-              <Tab label="Configuração" />
-          </Tabs>
-          {/* Aba Historia */}
-          <Box component="main" 
-            sx={{ 
-              flexGrow: 1, 
-              bgcolor: "background.default", 
-              p: 3,
-              display: tab === 0 ? "block" : "none" }}
-            >
+          <Box component="main" sx={{ flexGrow: 1, bgcolor: "background.default", p: 3 }}>
             {selectedChapter ? (
               <>
                 <FormControlLabel
@@ -1011,17 +999,6 @@ const BookEditor: React.FC = () => {
                 Adicione um capítulo para começar...
               </Typography>
             )}
-          </Box>
-          {/* Aba Configurações */}
-          <Box component="main"
-            sx={{
-              flexGrow: 1,
-              bgcolor: "background.default",
-              p: 3,
-              display: tab === 1 ? "block" : "none",
-            }}
-          >
-            <GameSetup />
           </Box>
           <CustomDialogInformacao titulo={dialogInfo.title} abrirModal={dialogInfo.open} handleFechar={handleCloseModal} mensagem={dialogInfo.message} />
           <CustomAlertDialog open={dialogAlert.open} title={dialogAlert.title} message={dialogAlert.message} handleClickYes={clearHistory}
