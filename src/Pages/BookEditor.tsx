@@ -726,15 +726,24 @@ const BookEditor: React.FC = () => {
                               }}
                               sx={{ mb: 2 }} >
                               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                <Typography>Escolha {index + 1}</Typography>
-                                {/* Botão de Exclusão */}
-                                <IconButton aria-label="excluir"
+                                {/* Usamos um Box para alinhar o título e o texto da escolha */}
+                                <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+                                  <Typography sx={{ flexShrink: 0 }}>Escolha {index + 1}</Typography>
+                                  {choice.text && (
+                                    <Typography variant="body2" color="textSecondary" noWrap sx={{ ml: 2, flexGrow: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                      {"(" + choice.text + ")"}
+                                    </Typography>
+                                  )}
+                                </Box>
+                                
+                                {/* Botão de Exclusão permanece como está, mas agora ele será alinhado automaticamente à direita */}
+                                <IconButton aria-label="excluir" sx={{ ml: 'auto' }}
                                   onClick={(event) => {
                                     event.stopPropagation();
                                     setDeleteChoiceDialog({ ...deleteChoiceDialog, open: true, param: index, message: 'Deseja realmente excluir esta Escolha?' });
-                                  }} sx={{ ml: 'auto' }} >
+                                  }} >
                                   <DeleteIcon />
-                                </IconButton>                                  
+                                </IconButton>           
                               </AccordionSummary>
                               <AccordionDetails sx={{ display: 'flex', flexDirection: 'column' }}>
                                 <Grid container spacing={2} alignItems="center">
