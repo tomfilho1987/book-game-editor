@@ -27,6 +27,7 @@ import { validarProbabilidades } from "../Utils/validarProbabilidades";
 import validateChoices from "../Utils/validateChoices";
 import validateStartChapter from "../Utils/validateStartChapter";
 import { IGameConfig, IResource } from "../Interfaces/IGameConfig";
+import { useJsonLoader } from "../Utils/useJsonLoader";
 
 const initialData: Chapter[] = JSON.parse(localStorage.getItem("bookData") || "[]") || [
   {
@@ -64,21 +65,23 @@ const BookEditor: React.FC = () => {
 
   const [sumOfProbabilities, setSumOfProbabilities] = useState<number>(0);
   const [probabilityValidationMessage, setProbabilityValidationMessage] = useState<string | null>(null);
-  const [currentChoiceIndex, setCurrentChoiceIndex] = useState<number>(0); // Índice da escolha sendo editada
-  const currentChapterIndex = chapters.findIndex(ch => ch.id === selectedChapter?.id);
-  const currentChapter = currentChapterIndex !== -1 ? chapters[currentChapterIndex] : null;
-  const currentChoice = currentChapter?.choices[currentChoiceIndex];
+  /** Índice da escolha sendo editada */
+  const [currentChoiceIndex, setCurrentChoiceIndex] = useState<number>(0);
   const [focusedProbabilityField, setFocusedProbabilityField] = useState<number | null>(null);
   const [lastModifiedFieldBelow100, setLastModifiedFieldBelow100] = useState<number | null>(null);
-  const [tab, setTab] = useState(0); // Controla as abas
   /** Novo estado para controlar o erro de validação do título */
   const [titleError, setTitleError] = useState<string | null>(null);
   /** Novo estado para controlar o erro de validação do texto */
   const [textError, setTextError] = useState<string | null>(null);
   /** Estado para controlar a aba principal selecionada (0: Gatilhos, 1: Escolhas). */
-  const [selectedTab, setSelectedTab] = useState(0); // Inicialmente, Escolhas estará selecionada
-
+  const [selectedTab, setSelectedTab] = useState(0);
+  /** hook customizado para carrregar arquivo */
+  const { loadJsonFile } = useJsonLoader({ setChapters, setSelectedChapter, setLoadedFileName, setConfig });
+  
   const recursosUsados = useMemo(() => extrairRecursosDeChoices(chapters), [chapters]);
+  const currentChapterIndex = chapters.findIndex(ch => ch.id === selectedChapter?.id);
+  const currentChapter = currentChapterIndex !== -1 ? chapters[currentChapterIndex] : null;
+  const currentChoice = currentChapter?.choices[currentChoiceIndex];
 
   type RecursoOption = { key: string; label: string; };
 
@@ -426,203 +429,203 @@ const BookEditor: React.FC = () => {
     }
   }
 
-  /**
-   * @function loadJsonFile
-   * @description Carrega os dados do arquivo JSON selecionado e atualiza o estado dos capítulos.
-   */
-const loadJsonFile = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+//   /**
+//    * @function loadJsonFile
+//    * @description Carrega os dados do arquivo JSON selecionado e atualiza o estado dos capítulos.
+//    */
+// const loadJsonFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+//     const file = event.target.files?.[0];
+//     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        try {
-            const jsonData = JSON.parse(e.target?.result as string);
+//     const reader = new FileReader();
+//     reader.onload = (e) => {
+//         try {
+//             const jsonData = JSON.parse(e.target?.result as string);
 
-            if (!jsonData || typeof jsonData.chapters !== 'object') {
-                throw new Error("Formato inválido: objeto 'chapters' não encontrado.");
-            }
+//             if (!jsonData || typeof jsonData.chapters !== 'object') {
+//                 throw new Error("Formato inválido: objeto 'chapters' não encontrado.");
+//             }
 
-            const rawStartChapterKey = jsonData.start; // O ID inicial do JSON (ex: "intro" ou "start")
+//             const rawStartChapterKey = jsonData.start; // O ID inicial do JSON (ex: "intro" ou "start")
 
-            // 1. Criar um mapeamento de IDs do JSON para IDs numéricos internos
-            const chapterIdMap = new Map<string | number, number>();
-            let nextNumericId = 1; // Começa de 1 ou do maior ID numérico existente se preferir
+//             // 1. Criar um mapeamento de IDs do JSON para IDs numéricos internos
+//             const chapterIdMap = new Map<string | number, number>();
+//             let nextNumericId = 1; // Começa de 1 ou do maior ID numérico existente se preferir
 
-            // Primeiro, preenche o mapa com IDs numéricos existentes e IDs alfanuméricos
-            Object.keys(jsonData.chapters).forEach(jsonId => {
-                const numericId = Number(jsonId);
-                if (!isNaN(numericId)) {
-                    // Se já é um número, usa ele mesmo
-                    chapterIdMap.set(jsonId, numericId);
-                    if (numericId >= nextNumericId) {
-                        nextNumericId = numericId + 1; // Garante que novos IDs sejam maiores
-                    }
-                } else {
-                    // Se for string alfanumérica, atribui um novo ID numérico sequencial
-                    chapterIdMap.set(jsonId, nextNumericId);
-                    nextNumericId++;
-                }
-            });
+//             // Primeiro, preenche o mapa com IDs numéricos existentes e IDs alfanuméricos
+//             Object.keys(jsonData.chapters).forEach(jsonId => {
+//                 const numericId = Number(jsonId);
+//                 if (!isNaN(numericId)) {
+//                     // Se já é um número, usa ele mesmo
+//                     chapterIdMap.set(jsonId, numericId);
+//                     if (numericId >= nextNumericId) {
+//                         nextNumericId = numericId + 1; // Garante que novos IDs sejam maiores
+//                     }
+//                 } else {
+//                     // Se for string alfanumérica, atribui um novo ID numérico sequencial
+//                     chapterIdMap.set(jsonId, nextNumericId);
+//                     nextNumericId++;
+//                 }
+//             });
 
-            // Converte o startChapterKey para o ID numérico interno
-            const startChapterId = chapterIdMap.get(rawStartChapterKey);
-            if (startChapterId === undefined) {
-                console.warn(`Capítulo inicial '${rawStartChapterKey}' não encontrado no JSON. O primeiro capítulo carregado será marcado como inicial.`);
-                // Poderia definir um valor padrão ou lançar um erro
-            }
+//             // Converte o startChapterKey para o ID numérico interno
+//             const startChapterId = chapterIdMap.get(rawStartChapterKey);
+//             if (startChapterId === undefined) {
+//                 console.warn(`Capítulo inicial '${rawStartChapterKey}' não encontrado no JSON. O primeiro capítulo carregado será marcado como inicial.`);
+//                 // Poderia definir um valor padrão ou lançar um erro
+//             }
 
-            const loadedDefaultResources: IResource[] = [];
-            if (jsonData.default_resources && typeof jsonData.default_resources === 'object') {
-                Object.entries(jsonData.default_resources).forEach(([key, value]) => {
-                    let isHidden = false;
-                    let cleanedKey = key;
+//             const loadedDefaultResources: IResource[] = [];
+//             if (jsonData.default_resources && typeof jsonData.default_resources === 'object') {
+//                 Object.entries(jsonData.default_resources).forEach(([key, value]) => {
+//                     let isHidden = false;
+//                     let cleanedKey = key;
 
-                    if (key.startsWith('#') || key.startsWith('@')) {
-                        isHidden = true;
-                        cleanedKey = key.substring(1);
-                    }
+//                     if (key.startsWith('#') || key.startsWith('@')) {
+//                         isHidden = true;
+//                         cleanedKey = key.substring(1);
+//                     }
 
-                    loadedDefaultResources.push({
-                        key: cleanedKey,
-                        value: Number(value),
-                        isHidden: isHidden,
-                    });
-                });
-            }
+//                     loadedDefaultResources.push({
+//                         key: cleanedKey,
+//                         value: Number(value),
+//                         isHidden: isHidden,
+//                     });
+//                 });
+//             }
 
-            const loadedChapters = Object.entries(jsonData.chapters).map(([jsonId, chapterDataUnknown]) => {
-                const chapterData = chapterDataUnknown as IChapterDataJSON;
-                const chapterInternalId = chapterIdMap.get(jsonId);
+//             const loadedChapters = Object.entries(jsonData.chapters).map(([jsonId, chapterDataUnknown]) => {
+//                 const chapterData = chapterDataUnknown as IChapterDataJSON;
+//                 const chapterInternalId = chapterIdMap.get(jsonId);
 
-                // Se por algum motivo não encontrou o ID no mapa (o que não deveria acontecer se o mapa for bem construído)
-                if (chapterInternalId === undefined) {
-                    console.error(`Erro: Capítulo '${jsonId}' não possui um ID numérico mapeado.`);
-                    // Lidar com o erro ou atribuir um ID padrão (e.g., -1)
-                    return null; // Ou lançar um erro, ou continuar e filtrar depois
-                }
+//                 // Se por algum motivo não encontrou o ID no mapa (o que não deveria acontecer se o mapa for bem construído)
+//                 if (chapterInternalId === undefined) {
+//                     console.error(`Erro: Capítulo '${jsonId}' não possui um ID numérico mapeado.`);
+//                     // Lidar com o erro ou atribuir um ID padrão (e.g., -1)
+//                     return null; // Ou lançar um erro, ou continuar e filtrar depois
+//                 }
 
-                const choices = Array.isArray(chapterData.choices)
-                    ? chapterData.choices.map((choiceJSON: IChoiceJSON) => {
-                        const rawTargets = choiceJSON.targets ?? [];
+//                 const choices = Array.isArray(chapterData.choices)
+//                     ? chapterData.choices.map((choiceJSON: IChoiceJSON) => {
+//                         const rawTargets = choiceJSON.targets ?? [];
 
-                        let normalizedTargets: { targetId: number; probability: number }[] = []; // targetId agora é sempre number
+//                         let normalizedTargets: { targetId: number; probability: number }[] = []; // targetId agora é sempre number
 
-                        if (rawTargets.length > 0) {
-                            if (typeof rawTargets[0] === "object" && "targetId" in rawTargets[0]) {
-                                // Formato com probabilidade explícita: [{ targetId: "heads", probability: 50 }]
-                                normalizedTargets = (rawTargets as { targetId: unknown; probability: unknown }[])
-                                    .map(t => {
-                                        const mappedTargetId = chapterIdMap.get(String(t.targetId)); // Converte para string para buscar no mapa
-                                        return {
-                                            targetId: mappedTargetId !== undefined ? mappedTargetId : -1, // Use -1 ou outro valor para erro
-                                            probability: Number(t.probability),
-                                        };
-                                    })
-                                    .filter(t => t.targetId !== -1); // Filtra destinos inválidos
-                            } else {
-                                // Formato simples: ["tails", "heads"] ou ["2", "3"]
-                                normalizedTargets = (rawTargets as (string | number)[])
-                                    .map(rawTarget => {
-                                        const mappedTargetId = chapterIdMap.get(String(rawTarget)); // Converte para string para buscar no mapa
-                                        return {
-                                            targetId: mappedTargetId !== undefined ? mappedTargetId : -1,
-                                            probability: 100 / rawTargets.length,
-                                        };
-                                    })
-                                    .filter(t => t.targetId !== -1); // Filtra destinos inválidos
-                            }
-                        }
+//                         if (rawTargets.length > 0) {
+//                             if (typeof rawTargets[0] === "object" && "targetId" in rawTargets[0]) {
+//                                 // Formato com probabilidade explícita: [{ targetId: "heads", probability: 50 }]
+//                                 normalizedTargets = (rawTargets as { targetId: unknown; probability: unknown }[])
+//                                     .map(t => {
+//                                         const mappedTargetId = chapterIdMap.get(String(t.targetId)); // Converte para string para buscar no mapa
+//                                         return {
+//                                             targetId: mappedTargetId !== undefined ? mappedTargetId : -1, // Use -1 ou outro valor para erro
+//                                             probability: Number(t.probability),
+//                                         };
+//                                     })
+//                                     .filter(t => t.targetId !== -1); // Filtra destinos inválidos
+//                             } else {
+//                                 // Formato simples: ["tails", "heads"] ou ["2", "3"]
+//                                 normalizedTargets = (rawTargets as (string | number)[])
+//                                     .map(rawTarget => {
+//                                         const mappedTargetId = chapterIdMap.get(String(rawTarget)); // Converte para string para buscar no mapa
+//                                         return {
+//                                             targetId: mappedTargetId !== undefined ? mappedTargetId : -1,
+//                                             probability: 100 / rawTargets.length,
+//                                         };
+//                                     })
+//                                     .filter(t => t.targetId !== -1); // Filtra destinos inválidos
+//                             }
+//                         }
 
-                        let combinedRequirements: Record<string, RequirementDetail> = {};
+//                         let combinedRequirements: Record<string, RequirementDetail> = {};
 
-                        if (choiceJSON.requirement) {
-                            Object.entries(choiceJSON.requirement).forEach(([reqKey, reqValue]) => {
-                                let isHiddenRequirement = false;
-                                let cleanedReqKey = reqKey;
+//                         if (choiceJSON.requirement) {
+//                             Object.entries(choiceJSON.requirement).forEach(([reqKey, reqValue]) => {
+//                                 let isHiddenRequirement = false;
+//                                 let cleanedReqKey = reqKey;
 
-                                if (reqKey.startsWith('#') || reqKey.startsWith('@')) {
-                                    isHiddenRequirement = true;
-                                    cleanedReqKey = reqKey.substring(1);
-                                }
+//                                 if (reqKey.startsWith('#') || reqKey.startsWith('@')) {
+//                                     isHiddenRequirement = true;
+//                                     cleanedReqKey = reqKey.substring(1);
+//                                 }
 
-                                const newRequirementId = uuidv4();
-                                combinedRequirements[newRequirementId] = {
-                                    key: cleanedReqKey,
-                                    value: reqValue as number | string,
-                                    isCost: false,
-                                    isHidden: isHiddenRequirement,
-                                    id: newRequirementId,
-                                };
-                            });
-                        }
+//                                 const newRequirementId = uuidv4();
+//                                 combinedRequirements[newRequirementId] = {
+//                                     key: cleanedReqKey,
+//                                     value: reqValue as number | string,
+//                                     isCost: false,
+//                                     isHidden: isHiddenRequirement,
+//                                     id: newRequirementId,
+//                                 };
+//                             });
+//                         }
 
-                        if (choiceJSON.cost) {
-                            Object.entries(choiceJSON.cost).forEach(([costKey, costValue]) => {
-                                let isHiddenCost = false;
-                                let cleanedCostKey = costKey;
+//                         if (choiceJSON.cost) {
+//                             Object.entries(choiceJSON.cost).forEach(([costKey, costValue]) => {
+//                                 let isHiddenCost = false;
+//                                 let cleanedCostKey = costKey;
 
-                                if (costKey.startsWith('#') || costKey.startsWith('@')) {
-                                    isHiddenCost = true;
-                                    cleanedCostKey = costKey.substring(1);
-                                }
+//                                 if (costKey.startsWith('#') || costKey.startsWith('@')) {
+//                                     isHiddenCost = true;
+//                                     cleanedCostKey = costKey.substring(1);
+//                                 }
 
-                                const newCostId = uuidv4();
-                                combinedRequirements[newCostId] = {
-                                    key: cleanedCostKey,
-                                    value: costValue as number | string,
-                                    isCost: true,
-                                    isHidden: isHiddenCost,
-                                    id: newCostId,
-                                };
-                            });
-                        }
+//                                 const newCostId = uuidv4();
+//                                 combinedRequirements[newCostId] = {
+//                                     key: cleanedCostKey,
+//                                     value: costValue as number | string,
+//                                     isCost: true,
+//                                     isHidden: isHiddenCost,
+//                                     id: newCostId,
+//                                 };
+//                             });
+//                         }
 
-                        return {
-                            id: uuidv4(),
-                            text: choiceJSON.text || "",
-                            targets: normalizedTargets,
-                            requirement: Object.keys(combinedRequirements).length > 0 ? combinedRequirements : undefined,
-                        };
-                    })
-                    : [];
+//                         return {
+//                             id: uuidv4(),
+//                             text: choiceJSON.text || "",
+//                             targets: normalizedTargets,
+//                             requirement: Object.keys(combinedRequirements).length > 0 ? combinedRequirements : undefined,
+//                         };
+//                     })
+//                     : [];
 
-                const formattedTitle = (Number(jsonId) && !isNaN(Number(jsonId))) ? `Cap ${jsonId}` : jsonId; // Mantém "heads", "start" como título se não for número
+//                 const formattedTitle = (Number(jsonId) && !isNaN(Number(jsonId))) ? `Cap ${jsonId}` : jsonId; // Mantém "heads", "start" como título se não for número
 
-                return {
-                    id: chapterInternalId, // <-- Agora o ID do capítulo é sempre um número
-                    title: formattedTitle,
-                    text: chapterData.text || "",
-                    choices,
-                    on_start: chapterData.on_start ?? {},
-                    isStartChapter: false,
-                };
-            }).filter(chapter => chapter !== null) as Chapter[]; // Filtra nulls se houver, e garante o tipo Chapter[]
+//                 return {
+//                     id: chapterInternalId, // <-- Agora o ID do capítulo é sempre um número
+//                     title: formattedTitle,
+//                     text: chapterData.text || "",
+//                     choices,
+//                     on_start: chapterData.on_start ?? {},
+//                     isStartChapter: false,
+//                 };
+//             }).filter(chapter => chapter !== null) as Chapter[]; // Filtra nulls se houver, e garante o tipo Chapter[]
 
-            const chaptersWithStartFlag = loadedChapters.map(chapter => {
-                // A comparação é agora com o ID numérico
-                if (chapter.id === startChapterId) {
-                    return { ...chapter, isStartChapter: true };
-                }
-                return chapter;
-            });
+//             const chaptersWithStartFlag = loadedChapters.map(chapter => {
+//                 // A comparação é agora com o ID numérico
+//                 if (chapter.id === startChapterId) {
+//                     return { ...chapter, isStartChapter: true };
+//                 }
+//                 return chapter;
+//             });
 
-            setConfig(prevConfig => ({
-                ...prevConfig,
-                default_resources: loadedDefaultResources,
-            }));
+//             setConfig(prevConfig => ({
+//                 ...prevConfig,
+//                 default_resources: loadedDefaultResources,
+//             }));
 
-            setChapters(chaptersWithStartFlag);
-            // Ao selecionar o capítulo inicial, use o ID numérico
-            setSelectedChapter(chaptersWithStartFlag.find(c => c.id === startChapterId) || (chaptersWithStartFlag.length > 0 ? chaptersWithStartFlag[0] : null));
-            setLoadedFileName(file.name);
-        } catch (error) {
-          setDialogInfo({ ...dialogInfo, open: true, message: "Erro ao carregar o arquivo JSON. Por favor, verificar se escolheu o arquivo com a extensão '.json'."});
-        }
-    };
+//             setChapters(chaptersWithStartFlag);
+//             // Ao selecionar o capítulo inicial, use o ID numérico
+//             setSelectedChapter(chaptersWithStartFlag.find(c => c.id === startChapterId) || (chaptersWithStartFlag.length > 0 ? chaptersWithStartFlag[0] : null));
+//             setLoadedFileName(file.name);
+//         } catch (error) {
+//           setDialogInfo({ ...dialogInfo, open: true, message: "Erro ao carregar o arquivo JSON. Por favor, verificar se escolheu o arquivo com a extensão '.json'."});
+//         }
+//     };
 
-    reader.readAsText(file);
-};
+//     reader.readAsText(file);
+// };
    
   /**
    * @function handleSaveClick
