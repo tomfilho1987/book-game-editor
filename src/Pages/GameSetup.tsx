@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, TextField, Button, Typography, IconButton, FormControlLabel, Checkbox, Modal, Fade, Backdrop } from '@mui/material';
+import { Box, TextField, Button, Typography, IconButton, FormControlLabel, Checkbox, Modal, Fade, Backdrop, Grid, Grid2, Divider } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import { ICondition, IGameConfig, IResource } from '../Interfaces/IGameConfig';
 import SaveIcon from "@mui/icons-material/Save";
@@ -249,102 +249,79 @@ const GameSetup: React.FC = () => {
     };
 
     return (
-        <Box sx={{ p: 3, mt: 1 }}>
-            <Typography variant="h6" gutterBottom>Recursos</Typography>
-            {config.default_resources.map((resource, index) => (
-                <Box key={index} sx={{ mb: 2 }}>
-                    <FormControlLabel
-                        control={
-                            <Checkbox
-                                checked={resource.isHidden || false}
-                                onChange={(e) => handleResourceChange(index, 'isHidden', e.target.checked)}
-                            />
-                        }
-                        label="Oculto?"
-                        sx={{ mb: 0.5 }}
-                    />
-
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <TextField
-                            label="Recurso"
-                            value={resource.key || ""}
-                            sx={{ mr: 1 }}
-                            onChange={(e) => handleResourceChange(index, 'key', e.target.value)}
-                        />
-                        <TextField
-                            label="Valor"
-                            value={resource.value || ""}
-                            sx={{ mr: 1 }}
-                            onChange={(e) => handleResourceChange(index, 'value', e.target.value)}
-                        />
-                        {index === config.default_resources.length - 1 && (
-                            <Button variant="outlined" onClick={handleAddResource} sx={{ mr: 1 }}>
-                                ➕ Adicionar Recurso
-                            </Button>
-                        )}
-                        {config.default_resources.length > 1 && (
-                            <IconButton onClick={() => handleRemoveResource(index)}>
-                                <DeleteIcon />
-                            </IconButton>
-                        )}
+        <Grid2 container sx={{ minHeight: 1, mt: 2 }}>
+            <Grid2 size={2}>
+                <Box sx={{ p: 2 }}>
+                    <Divider sx={{ my: 2 }} />
+                    <Box>
+                        <Button variant="contained" fullWidth onClick={generateJsonFile} startIcon={<SaveIcon />}>
+                            Salvar
+                        </Button>
+                        <Divider sx={{ my: 2 }} />
+                        <Button variant="outlined" style={{ marginTop: "10px", width: "100%" }} component="label" startIcon={<UploadFileIcon />}>
+                            Carregar
+                            <input type="file" accept=".json" hidden onChange={handleFileUpload} />
+                        </Button>
                     </Box>
                 </Box>
-            ))}
+            </Grid2>
+            <Divider orientation="vertical" variant="fullWidth" flexItem/>
+            <Grid2 size={"grow"}>
+                <Box sx={{ p: 3, mt: 1 }}>
+                    <Typography variant="h6" gutterBottom>Recursos</Typography>
+                    {config.default_resources.map((resource, index) => (
+                        <Box key={index} sx={{ mb: 2 }}>
+                            <FormControlLabel
+                                control={
+                                    <Checkbox checked={resource.isHidden || false}
+                                        onChange={(e) => handleResourceChange(index, 'isHidden', e.target.checked)} />
+                                }
+                                label="Oculto?" sx={{ mb: 0.5 }} />
 
-            <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>Condições</Typography>
-            {conditionList.map((condition, index) => (
-                <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <TextField
-                        label="Condição"
-                        value={condition.key}
-                        sx={{ mr: 1 }}
-                        onChange={(e) => handleConditionFieldChange(index, 'key', e.target.value)}
-                    />
-                    <TextField
-                        label="Valor Mínimo"
-                        value={condition.min}
-                        sx={{ mr: 1 }}
-                        onChange={(e) => handleConditionFieldChange(index, 'min', e.target.value)}
-                    />
-                    <TextField
-                        label="Gatilho"
-                        value={condition.trigger}
-                        sx={{ mr: 1 }}
-                        onChange={(e) => handleConditionFieldChange(index, 'trigger', e.target.value)}
-                    />
-                    {index === conditionList.length - 1 && (
-                        <Button variant="outlined" onClick={handleAddCondition} sx={{ mr: 1 }}>
-                            ➕ Adicionar Condição
-                        </Button>
-                    )}
-                    {conditionList.length > 1 && (
-                        <IconButton onClick={() => handleRemoveCondition(index)}>
-                            <DeleteIcon />
-                        </IconButton>
-                    )}
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                <TextField label="Recurso" value={resource.key || ""} sx={{ mr: 1 }}
+                                    onChange={(e) => handleResourceChange(index, 'key', e.target.value)} />
+                                <TextField label="Valor" value={resource.value || ""} sx={{ mr: 1 }}
+                                    onChange={(e) => handleResourceChange(index, 'value', e.target.value)} />
+                                {index === config.default_resources.length - 1 && (
+                                    <Button variant="outlined" onClick={handleAddResource} sx={{ mr: 1 }}>
+                                        ➕ Adicionar Recurso
+                                    </Button>
+                                )}
+                                {config.default_resources.length > 1 && (
+                                    <IconButton onClick={() => handleRemoveResource(index)}>
+                                        <DeleteIcon />
+                                    </IconButton>
+                                )}
+                            </Box>
+                        </Box>
+                    ))}
+
+                    <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>Condições</Typography>
+                    {conditionList.map((condition, index) => (
+                        <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                            <TextField label="Condição" value={condition.key} sx={{ mr: 1 }}
+                                onChange={(e) => handleConditionFieldChange(index, 'key', e.target.value)} />
+                            <TextField label="Valor Mínimo" value={condition.min} sx={{ mr: 1 }}
+                                onChange={(e) => handleConditionFieldChange(index, 'min', e.target.value)} />
+                            <TextField label="Gatilho" value={condition.trigger} sx={{ mr: 1 }}
+                                onChange={(e) => handleConditionFieldChange(index, 'trigger', e.target.value)} />
+                            {index === conditionList.length - 1 && (
+                                <Button variant="outlined" onClick={handleAddCondition} sx={{ mr: 1 }}>
+                                    ➕ Adicionar Condição
+                                </Button>
+                            )}
+                            {conditionList.length > 1 && (
+                                <IconButton onClick={() => handleRemoveCondition(index)}>
+                                    <DeleteIcon />
+                                </IconButton>
+                            )}
+                        </Box>
+                    ))}
+                    <CustomDialogInformacao titulo={dialogInfo.title} abrirModal={dialogInfo.open} handleFechar={handleCloseModal} mensagem={dialogInfo.message} />
                 </Box>
-            ))}
-            <Box sx={{ display: 'flex', gap: 2, mt: 3 }}> {/* Adiciona um Box para os botões e gap */}
-                <Button
-                    variant="contained"
-                    component="label" // Importante para o input file
-                    startIcon={<UploadFileIcon />}
-                >
-                    Carregar Config
-                    <input
-                        type="file"
-                        accept=".json"
-                        hidden
-                        onChange={handleFileUpload}
-                    />
-                </Button>
-                <Button variant="contained" onClick={generateJsonFile} startIcon={<SaveIcon />}>
-                    Salvar Config
-                </Button>
-            </Box>
-            <CustomDialogInformacao titulo={dialogInfo.title} abrirModal={dialogInfo.open} handleFechar={handleCloseModal} mensagem={dialogInfo.message} />
-
-        </Box>
+            </Grid2>
+        </Grid2>
     );
 };
 
