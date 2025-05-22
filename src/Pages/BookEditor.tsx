@@ -617,8 +617,7 @@ const loadJsonFile = (event: React.ChangeEvent<HTMLInputElement>) => {
             setSelectedChapter(chaptersWithStartFlag.find(c => c.id === startChapterId) || (chaptersWithStartFlag.length > 0 ? chaptersWithStartFlag[0] : null));
             setLoadedFileName(file.name);
         } catch (error) {
-            console.error("Erro ao carregar o arquivo JSON:", error);
-            // Poderia adicionar um feedback ao usuário aqui
+          setDialogInfo({ ...dialogInfo, open: true, message: "Erro ao carregar o arquivo JSON. Por favor, verificar se escolheu o arquivo com a extensão '.json'."});
         }
     };
 
