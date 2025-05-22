@@ -6,7 +6,7 @@
 import { IChoiceJSON } from "./IChoiceJSON";
 
 export interface IChapterDataJSON {
-    text: string;
-    choices: IChoiceJSON[];
-    on_start?: Record<string, number | string>;
-  }
+  choices: IChoiceJSON[];  
+  text: string;
+  on_start?: Record<string, number | string>;
+}

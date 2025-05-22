@@ -13,7 +13,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import SaveIcon from "@mui/icons-material/Save";
 import AddIcon from "@mui/icons-material/Add";
 import { Chapter } from "../Types/Chapter";
-import { Choice } from "../Types/Choice";
+import { Choice, RequirementDetail } from "../Types/Choice";
 import { IChapterOption } from "../Interfaces/IChapterOption";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { IChoiceJSON } from "../Interfaces/JSON/IChoiceJSON";
@@ -25,8 +25,8 @@ import CustomDialogInformacao from "../Components/CustomDialogInformacao";
 import { saveJsonFile } from "../Utils/saveGameData";
 import { validarProbabilidades } from "../Utils/validarProbabilidades";
 import validateChoices from "../Utils/validateChoices";
-import GameSetup from "./GameSetup";
 import validateStartChapter from "../Utils/validateStartChapter";
+import { IGameConfig, IResource } from "../Interfaces/IGameConfig";
 
 const initialData: Chapter[] = JSON.parse(localStorage.getItem("bookData") || "[]") || [
   {
@@ -60,6 +60,7 @@ const BookEditor: React.FC = () => {
   const [onStartHiddenStatus, setOnStartHiddenStatus] = useState<Record<number, Record<string, boolean>>>({});
   const [firstDestinationAdded, setFirstDestinationAdded] = useState(false);
   const [probabilityErrors, setProbabilityErrors] = useState<Record<number, string | null>>({});
+  const [config, setConfig] = useState<Array<IGameConfig>>([]);
 
   const [sumOfProbabilities, setSumOfProbabilities] = useState<number>(0);
   const [probabilityValidationMessage, setProbabilityValidationMessage] = useState<string | null>(null);
@@ -429,69 +430,167 @@ const BookEditor: React.FC = () => {
    * @function loadJsonFile
    * @description Carrega os dados do arquivo JSON selecionado e atualiza o estado dos capítulos.
    */
-  const loadJsonFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+const loadJsonFile = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      try {
-        const jsonData = JSON.parse(e.target?.result as string);
-        const loadedChapters = Object.entries(jsonData.chapters).map(
-          ([id, chapterDataUnknown]) => {
-            const chapterData = chapterDataUnknown as IChapterDataJSON;
-            return {
-              id: Number(id),
-              title: `${id}`,
-              text: chapterData.text,
-              choices: chapterData.choices.map((choiceJSON: IChoiceJSON) => {
-                const targetsWithProbability = choiceJSON.targets?.length > 0 && typeof choiceJSON.targets[0] === 'object'
-                  ? (choiceJSON.targets as { targetId: number; probability: number }[]).map(target => ({
-                    targetId: Number(target.targetId), // Converte targetId para number
-                    probability: Number(target.probability), // Converte probability para number
-                  }))
-                  : choiceJSON.targets?.map(targetStr => ({
-                    targetId: Number(targetStr),
-                    probability: 100 / (choiceJSON.targets?.length || 1),
-                  })) || [];
+        try {
+            const jsonData = JSON.parse(e.target?.result as string);
+
+            if (!jsonData || typeof jsonData.chapters !== 'object') {
+                throw new Error("Formato inválido: objeto 'chapters' não encontrado.");
+            }
+
+            const startChapterKey = jsonData.start;
+
+            const chapterIdList = Object.keys(jsonData.chapters).map(id => Number(id)).filter(id => !isNaN(id));
+
+            // Processamento de default_resources (mantido como está, pois já funciona)
+            const loadedDefaultResources: IResource[] = [];
+            if (jsonData.default_resources && typeof jsonData.default_resources === 'object') {
+                Object.entries(jsonData.default_resources).forEach(([key, value]) => {
+                    let isHidden = false;
+                    let cleanedKey = key;
+
+                    if (key.startsWith('#') || key.startsWith('@')) {
+                        isHidden = true;
+                        cleanedKey = key.substring(1);
+                    }
+
+                    loadedDefaultResources.push({
+                        key: cleanedKey,
+                        value: Number(value),
+                        isHidden: isHidden,
+                    });
+                });
+            }
+
+            const loadedChapters = Object.entries(jsonData.chapters).map(([id, chapterDataUnknown]) => {
+                const chapterData = chapterDataUnknown as IChapterDataJSON;
+
+                const choices = Array.isArray(chapterData.choices)
+                    ? chapterData.choices.map((choiceJSON: IChoiceJSON) => {
+                        const rawTargets = choiceJSON.targets ?? [];
+
+                        let normalizedTargets: { targetId: number; probability: number }[] = [];
+
+                        if (rawTargets.length > 0) {
+                            if (typeof rawTargets[0] === "object" && "targetId" in rawTargets[0]) {
+                                normalizedTargets = (rawTargets as { targetId: unknown; probability: unknown }[])
+                                    .map(t => ({
+                                        targetId: Number(t.targetId),
+                                        probability: Number(t.probability),
+                                    }))
+                                    .filter(t => !isNaN(t.targetId) && chapterIdList.includes(t.targetId))
+                                    .map(t => ({
+                                        targetId: t.targetId,
+                                        probability: t.probability,
+                                    }));
+                            } else {
+                                normalizedTargets = (rawTargets as unknown[])
+                                    .map(t => Number(t))
+                                    .filter(t => !isNaN(t) && chapterIdList.includes(t))
+                                    .map(validId => ({
+                                        targetId: validId,
+                                        probability: 100 / rawTargets.length,
+                                    }));
+                            }
+                        }
+
+                        let combinedRequirements: Record<string, RequirementDetail> = {};
+
+                        // Processa requirements
+                        if (choiceJSON.requirement) {
+                            Object.entries(choiceJSON.requirement).forEach(([reqKey, reqValue]) => {
+                                let isHiddenRequirement = false;
+                                let cleanedReqKey = reqKey;
+
+                                // Verifica se a chave do requisito começa com '#' ou '@'
+                                if (reqKey.startsWith('#') || reqKey.startsWith('@')) {
+                                    isHiddenRequirement = true;
+                                    cleanedReqKey = reqKey.substring(1); // Remove o '#' ou '@'
+                                }
+
+                                const newRequirementId = uuidv4();
+                                combinedRequirements[newRequirementId] = {
+                                    key: cleanedReqKey, // Usa a chave limpa
+                                    value: reqValue as number | string,
+                                    isCost: false,
+                                    isHidden: isHiddenRequirement, // Define isHidden com base na verificação
+                                    id: newRequirementId,
+                                };
+                            });
+                        }
+
+                        // Processa costs
+                        if (choiceJSON.cost) {
+                            Object.entries(choiceJSON.cost).forEach(([costKey, costValue]) => {
+                                let isHiddenCost = false;
+                                let cleanedCostKey = costKey;
+
+                                // Verifica se a chave do custo começa com '#' ou '@'
+                                if (costKey.startsWith('#') || costKey.startsWith('@')) {
+                                    isHiddenCost = true;
+                                    cleanedCostKey = costKey.substring(1); // Remove o '#' ou '@'
+                                }
+
+                                const newCostId = uuidv4();
+                                combinedRequirements[newCostId] = {
+                                    key: cleanedCostKey, // Usa a chave limpa
+                                    value: costValue as number | string,
+                                    isCost: true,
+                                    isHidden: isHiddenCost, // Define isHidden com base na verificação
+                                    id: newCostId,
+                                };
+                            });
+                        }
+
+                        return {
+                            id: uuidv4(),
+                            text: choiceJSON.text || "",
+                            targets: normalizedTargets,
+                            requirement: Object.keys(combinedRequirements).length > 0 ? combinedRequirements : undefined,
+                        };
+                    })
+                    : [];
+
+                const chapterTitle = `${id}`;
+                const formattedTitle = chapterTitle.length < 3 ? `Cap ${chapterTitle}` : chapterTitle;
 
                 return {
-                  id: uuidv4(),
-                  targets: targetsWithProbability,
-                  text: choiceJSON.text,
-                  requirement: choiceJSON.requirement
-                    ? Object.entries(choiceJSON.requirement).reduce(
-                        (acc, [reqKey, reqData]) => {
-                          const newRequirementId = uuidv4();
-                          acc[newRequirementId] = {
-                            key: reqKey,
-                            value: reqData as number | string,
-                            isCost: false,
-                            isHidden: false,
-                            id: newRequirementId,
-                          };
-                          return acc;
-                        },
-                        {} as Record<string, { key: string; value: number | string; isCost: boolean; isHidden: boolean; id?: string }>
-                      )
-                    : undefined,
+                    id: Number(id),
+                    title: formattedTitle,
+                    text: chapterData.text || "",
+                    choices,
+                    on_start: chapterData.on_start ?? {},
+                    isStartChapter: false,
                 };
-              }),
-              on_start: chapterData.on_start,
-            };
-          }
-        );
-        setChapters(loadedChapters);
-        setSelectedChapter(loadedChapters.length > 0 ? loadedChapters[0] : null);
-        if (file) {
-          setLoadedFileName(file.name);
+            });
+
+            const chaptersWithStartFlag = loadedChapters.map(chapter => {
+                if (String(chapter.id) === String(startChapterKey)) {
+                    return { ...chapter, isStartChapter: true };
+                }
+                return chapter;
+            });
+
+            setConfig((prevConfig) => ({
+                ...prevConfig,
+                default_resources: loadedDefaultResources,
+            }));
+
+            setChapters(chaptersWithStartFlag);
+            setSelectedChapter(chaptersWithStartFlag.length > 0 ? chaptersWithStartFlag[0] : null);
+            setLoadedFileName(file.name);
+        } catch (error) {
+            console.error("Erro ao carregar o arquivo JSON:", error);
         }
-      } catch (error) {
-        console.error("Erro ao carregar o arquivo JSON:", error);
-      }
     };
+
     reader.readAsText(file);
-  };
+};
    
   /**
    * @function handleSaveClick
@@ -635,13 +734,13 @@ const BookEditor: React.FC = () => {
               <Button variant="outlined" onClick={confirmationDialog} fullWidth startIcon={<AddIcon />}>
                 Limpar
               </Button>
-              {/* <Divider sx={{ my: 2 }} />
+              <Divider sx={{ my: 2 }} />
               <input type="file" accept=".json" onChange={loadJsonFile} style={{ display: "none" }} id="load-json-file" />
               <label htmlFor="load-json-file">
-                <Button variant="outlined" component="span" fullWidth startIcon={<FileUploadIcon />}>
+                <Button variant="outlined" component="span" fullWidth>
                   Carregar
                 </Button>
-              </label> */}
+              </label>
             </Box>
           </Box>
         </Grid2>
