@@ -1,6 +1,13 @@
-// hooks/useJsonLoader.ts ou utils/useJsonLoader.ts
+/**
+ * @file useJsonLoader.tsx
+ * @description Componente responsável pelo download do arquivo
+ * @author Airton Filho
+ * @date [Data de Criação]
+ * @version 1.0
+ */
+
 import React, { useState, useCallback } from 'react';
-import { v4 as uuidv4 } from 'uuid'; // Certifique-se de ter 'uuid' instalado (npm install uuid @types/uuid)
+import { v4 as uuidv4 } from 'uuid';
 import { Chapter } from '../Types/Chapter';
 import { IGameConfig, IResource } from '../Interfaces/IGameConfig';
 import { IChapterDataJSON } from '../Interfaces/JSON/IChapterDataJSON';
@@ -14,13 +21,12 @@ interface UseJsonLoaderResult {
     closeErrorModal: () => void;
 }
 
-// Defina as props que o hook customizado precisa para retornar os dados para o componente pai
+/*** Props que o hook customizado precisa para retornar os dados para o componente pai */
 interface UseJsonLoaderProps {
     setChapters: React.Dispatch<React.SetStateAction<Chapter[]>>;
     setSelectedChapter: React.Dispatch<React.SetStateAction<Chapter | null>>;
     setLoadedFileName: React.Dispatch<React.SetStateAction<string | null>>;
     setConfig: React.Dispatch<React.SetStateAction<Array<IGameConfig>>>;
-    // ... outros setters, se houver
 }
 
 export const useJsonLoader = ({ setChapters, setSelectedChapter, setLoadedFileName, setConfig }: UseJsonLoaderProps): UseJsonLoaderResult => {
@@ -31,7 +37,7 @@ export const useJsonLoader = ({ setChapters, setSelectedChapter, setLoadedFileNa
         setIsErrorModalOpen(false);
         setErrorModalMessage('');
     }, []);
-
+        
     const loadJsonFile = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
@@ -96,6 +102,9 @@ export const useJsonLoader = ({ setChapters, setSelectedChapter, setLoadedFileNa
                         setIsErrorModalOpen(true);
                         throw new Error("Erro de mapeamento de capítulo.");
                     }
+
+                    // Quebra de linha
+                    chapterData.text = chapterData.text.replace(/\\n/g, '\n');
 
                     const choices = Array.isArray(chapterData.choices)
                         ? chapterData.choices.map((choiceJSON: IChoiceJSON) => {
@@ -171,7 +180,6 @@ export const useJsonLoader = ({ setChapters, setSelectedChapter, setLoadedFileNa
                                 });
                             }
 
-                            // <--- CORREÇÃO APLICADA AQUI: Cast explícito para Choice
                             return {
                                 id: uuidv4(),
                                 text: choiceJSON.text || "",
@@ -183,7 +191,6 @@ export const useJsonLoader = ({ setChapters, setSelectedChapter, setLoadedFileNa
 
                     const formattedTitle = (Number(jsonId) && !isNaN(Number(jsonId))) ? `Cap ${jsonId}` : jsonId;
 
-                    // <--- CORREÇÃO APLICADA AQUI: Cast explícito para Chapter
                     return {
                         id: chapterInternalId,
                         title: formattedTitle,
@@ -224,7 +231,7 @@ export const useJsonLoader = ({ setChapters, setSelectedChapter, setLoadedFileNa
         };
 
         reader.readAsText(file);
-    }, [setChapters, setSelectedChapter, setLoadedFileName, setConfig, closeErrorModal]);
+    }, [setChapters, setSelectedChapter, setLoadedFileName, setConfig]);
 
     return {
         loadJsonFile,

@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Box, TextField, Button, Typography, IconButton, FormControlLabel, Checkbox, Modal, Fade, Backdrop, Grid, Grid2, Divider } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import { ICondition, IGameConfig, IResource } from '../Interfaces/IGameConfig';
-import SaveIcon from "@mui/icons-material/Save";
+import ClearIcon from '@mui/icons-material/Clear';
 import UploadFileIcon from "@mui/icons-material/UploadFile"; // Ícone para upload
 import CustomDialogInformacao from '../Components/CustomDialogInformacao';
 import { ICustomDialogAlert } from '../Interfaces/ICustomDialogAlert';
+import DownloadIcon from '@mui/icons-material/Download';
+import CustomAlertDialog from '../Components/CustomAlertDialog';
 
 /**
  * @interface IGameConfig
@@ -14,6 +16,7 @@ import { ICustomDialogAlert } from '../Interfaces/ICustomDialogAlert';
 const GameSetup: React.FC = () => {
     
     const [dialogInfo, setDialogInfo] = React.useState<ICustomDialogAlert>({ open: false, title: 'Aviso', message: '', param: '' })
+    const [dialogAlert, setDialogAlert] = React.useState<ICustomDialogAlert>({ open: false, title: 'Confirma Operação?', message: '', param: '' })
 
      /**
      * @state config
@@ -248,14 +251,32 @@ const GameSetup: React.FC = () => {
         setDialogInfo({ ...dialogInfo, open: false, message: '' })
     };
 
+    const confirmationDialog = () => {
+        setDialogAlert({ ...dialogAlert, open: true, message: `Deseja realmente limpar a configuração?` });
+    }
+    
+    /**
+     * @function handleClearAll
+     * @description Limpa todas as informações, resetando os estados `config` e `conditionList`.
+     */
+    const handleClearAll = () => {
+        setConfig({ default_resources: [{ key: '', value: '' }], conditions: {}, });
+        setConditionList([ { key: '', min: '', trigger: '' }, ]);
+        setDialogAlert({ ...dialogAlert, open: false })
+    };
+
     return (
         <Grid2 container sx={{ minHeight: 1, mt: 2 }}>
             <Grid2 size={2}>
                 <Box sx={{ p: 2 }}>
                     <Divider sx={{ my: 2 }} />
                     <Box>
-                        <Button variant="contained" fullWidth onClick={generateJsonFile} startIcon={<SaveIcon />}>
+                        <Button variant="contained" fullWidth onClick={generateJsonFile} startIcon={<DownloadIcon />}>
                             Salvar
+                        </Button>
+                        <Divider sx={{ my: 2 }} />
+                        <Button variant="outlined" onClick={confirmationDialog} fullWidth startIcon={<ClearIcon />}>
+                            Limpar
                         </Button>
                         <Divider sx={{ my: 2 }} />
                         <Button variant="outlined" style={{ marginTop: "10px", width: "100%" }} component="label" startIcon={<UploadFileIcon />}>
@@ -321,6 +342,10 @@ const GameSetup: React.FC = () => {
                     <CustomDialogInformacao titulo={dialogInfo.title} abrirModal={dialogInfo.open} handleFechar={handleCloseModal} mensagem={dialogInfo.message} />
                 </Box>
             </Grid2>
+            <CustomAlertDialog open={dialogAlert.open} title={dialogAlert.title} message={dialogAlert.message} handleClickYes={handleClearAll}
+                handleClickNo={() => { setDialogAlert({ ...dialogAlert, open: false }) }}
+                handleClickClose={() => { setDialogAlert({ ...dialogAlert, open: false }) }}
+            />
         </Grid2>
     );
 };

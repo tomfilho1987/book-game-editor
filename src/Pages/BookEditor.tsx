@@ -10,14 +10,13 @@ import { Box, Button, Checkbox, Divider, IconButton, FormControlLabel, List, Lis
     Autocomplete, createFilterOptions, Accordion, AccordionSummary, AccordionDetails, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, 
     Grid2, Grid} from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
-import SaveIcon from "@mui/icons-material/Save";
-import AddIcon from "@mui/icons-material/Add";
+import DownloadIcon from '@mui/icons-material/Download';
+import ClearIcon from '@mui/icons-material/Clear';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
 import { Chapter } from "../Types/Chapter";
-import { Choice, RequirementDetail } from "../Types/Choice";
+import { Choice } from "../Types/Choice";
 import { IChapterOption } from "../Interfaces/IChapterOption";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { IChoiceJSON } from "../Interfaces/JSON/IChoiceJSON";
-import { IChapterDataJSON } from "../Interfaces/JSON/IChapterDataJSON";
 import { v4 as uuidv4 } from 'uuid';
 import { ICustomDialogAlert } from "../Interfaces/ICustomDialogAlert";
 import CustomAlertDialog from "../Components/CustomAlertDialog";
@@ -28,6 +27,8 @@ import validateChoices from "../Utils/validateChoices";
 import validateStartChapter from "../Utils/validateStartChapter";
 import { IGameConfig, IResource } from "../Interfaces/IGameConfig";
 import { useJsonLoader } from "../Utils/useJsonLoader";
+import StoryMindMap from "./MapaMental/StoryMindMap";
+import CloseIcon from '@mui/icons-material/Close'; // <--- Ícone de Fechar para o Dialog
 
 const initialData: Chapter[] = JSON.parse(localStorage.getItem("bookData") || "[]") || [
   {
@@ -77,7 +78,10 @@ const BookEditor: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState(0);
   /** hook customizado para carrregar arquivo */
   const { loadJsonFile } = useJsonLoader({ setChapters, setSelectedChapter, setLoadedFileName, setConfig });
-  
+  /** Estado para controlar a visibilidade do mapa mental */
+  const [showMindMap, setShowMindMap] = useState(false);
+  /** Estado para controlar a abertura do modal */
+  const [openMindMapModal, setOpenMindMapModal] = useState(false);
   const recursosUsados = useMemo(() => extrairRecursosDeChoices(chapters), [chapters]);
   const currentChapterIndex = chapters.findIndex(ch => ch.id === selectedChapter?.id);
   const currentChapter = currentChapterIndex !== -1 ? chapters[currentChapterIndex] : null;
@@ -210,7 +214,7 @@ const BookEditor: React.FC = () => {
         setTextError('O texto do capítulo é obrigatório.');
       } else if (textError) {
         setTextError(null);
-      }
+      } 
     }
 
     const updatedChapter = { ...selectedChapter, [field]: value };
@@ -727,12 +731,15 @@ const BookEditor: React.FC = () => {
     setDeleteChoiceDialog({ ...deleteChoiceDialog, open: false, param: 0 });
   };
 
+  const handleOpenMindMap = () => setOpenMindMapModal(true);
+  const handleCloseMindMap = () => setOpenMindMapModal(false);
+  
   return (
       <Grid2 container sx={{ minHeight: 1, mt: 2 }}>
         <Grid2 size={2}>
           <Box sx={{ p: 2 }}>
             <Typography variant="h6">Capítulos</Typography>
-            <List component={"nav" as any} sx={{ maxHeight: '520px', overflow: 'auto' }} ref={chapterListRef}>
+            <List component={"nav" as any} sx={{ maxHeight: '440px', overflow: 'auto' }} ref={chapterListRef}>
               {chapters.map((ch) => {
                 const isSelected = ch.id === selectedChapter?.id;
                 return (
@@ -762,20 +769,24 @@ const BookEditor: React.FC = () => {
                   ➕ Adicionar Capítulo
               </Button>
               <Divider sx={{ my: 2 }} />
-              <Button variant="contained" onClick={handleSaveClick} fullWidth startIcon={<SaveIcon />}>
+              <Button variant="contained" onClick={handleSaveClick} fullWidth startIcon={<DownloadIcon />}>
                 Salvar
               </Button>
               <Divider sx={{ my: 2 }} />
-              <Button variant="outlined" onClick={confirmationDialog} fullWidth startIcon={<AddIcon />}>
+              <Button variant="outlined" onClick={confirmationDialog} fullWidth startIcon={<ClearIcon />}>
                 Limpar
               </Button>
               <Divider sx={{ my: 2 }} />
               <input type="file" accept=".json" onChange={loadJsonFile} style={{ display: "none" }} id="load-json-file" />
               <label htmlFor="load-json-file">
-                <Button variant="outlined" component="span" fullWidth>
+                <Button variant="outlined" component="span" fullWidth startIcon={<UploadFileIcon />}>
                   Carregar
                 </Button>
               </label>
+              {/* <Divider sx={{ my: 2 }} />
+              <Button variant="outlined" onClick={handleOpenMindMap} fullWidth style={{ display: !(chapters.length > 0) ? "none" : "block" }} >
+                Mostrar Mapa Mental
+              </Button> */}
             </Box>
           </Box>
         </Grid2>
@@ -1134,6 +1145,14 @@ const BookEditor: React.FC = () => {
               </Typography>
             )}
           </Box>
+          <Box component="main" sx={{ flexGrow: 1, bgcolor: "background.default", p: 3 }}>
+            {showMindMap && chapters && chapters.length > 0 && (
+                <Box sx={{ mt: 4, height: '700px', width: '100%', border: '1px solid #ddd' }}>
+                    <Typography variant="h6" gutterBottom>Mapa Mental da História</Typography>
+                    <StoryMindMap chapters={chapters} />
+                </Box>
+            )}
+          </Box>
           <CustomDialogInformacao titulo={dialogInfo.title} abrirModal={dialogInfo.open} handleFechar={handleCloseModal} mensagem={dialogInfo.message} />
           <CustomAlertDialog open={dialogAlert.open} title={dialogAlert.title} message={dialogAlert.message} handleClickYes={clearHistory}
               handleClickNo={() => { setDialogAlert({ ...dialogAlert, open: false }) }}
@@ -1147,6 +1166,43 @@ const BookEditor: React.FC = () => {
               handleClickNo={() => { setDeleteChoiceDialog({ ...deleteChoiceDialog, open: false }) }}
               handleClickClose={() => { setDeleteChoiceDialog({ ...deleteChoiceDialog, open: false }) }}
           />
+          <Dialog
+              open={openMindMapModal}
+              onClose={handleCloseMindMap}
+              maxWidth={false} // Define o tamanho máximo do dialog (xs, sm, md, lg, xl, false)
+              fullWidth={true} // Faz o dialog ocupar a largura máxima definida por maxWidth
+              // Se quiser que o dialog ocupe a tela inteira em qualquer tamanho de tela:
+              fullScreen={true}
+              // PaperProps={{ sx: { height: '90%' } }} // Controla a altura do Paper dentro do Dialog
+          >
+              <DialogTitle id="mind-map-dialog-title">
+                  Mapa Mental da História
+                  {/* Botão de fechar no canto superior direito do título */}
+                  <IconButton
+                      aria-label="close"
+                      onClick={handleCloseMindMap}
+                      sx={{
+                          position: 'absolute',
+                          right: 8,
+                          top: 8,
+                          color: (theme) => theme.palette.grey[500],
+                      }}
+                  >
+                      <CloseIcon />
+                  </IconButton>
+              </DialogTitle>
+              
+              <DialogContent dividers sx={{ flexGrow: 1, p: 0 }}>
+                  <div style={{ width: '100%', height: '100%' }}>
+                      {chapters && (
+                          <StoryMindMap chapters={Object.values(chapters)} />
+                      )}
+                  </div>
+              </DialogContent>
+              <DialogActions>
+                  <Button onClick={handleCloseMindMap}>Fechar</Button>
+              </DialogActions>
+          </Dialog>
         </Grid2>
       </Grid2>
   );
