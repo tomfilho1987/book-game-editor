@@ -280,51 +280,6 @@ const BookEditor: React.FC = () => {
         handleChapterChange("on_start", updatedOnStart);
     }, [selectedChapter, handleChapterChange]);
 
-  // const updateOnStartValue = (key: string, newValue: string) => {
-  //   if (!selectedChapter) return;
-
-  //   const currentOnStart = ensureOnStartItems(selectedChapter.on_start);
-  //   const existingItem = currentOnStart[key];
-
-  //   if (existingItem) {
-  //       const updatedOnStart: Record<string, OnStartItem> = {
-  //           ...currentOnStart,
-  //           [key]: {
-  //               ...existingItem,
-  //               value: newValue
-  //           }
-  //       };
-  //       handleChapterChange("on_start", updatedOnStart);
-  //   }
-  // };
-
-  // /**
-  //  * @function isOnStartHidden
-  //  * @description Verifica se um item específico do "On Start" está marcado como oculto.
-  //  * @param {string} key - A chave do item "On Start".
-  //  * @returns {boolean} - True se o item estiver marcado como oculto, false caso contrário.
-  //  */
-  // const isOnStartHidden = (key: string): boolean => {
-  //   return onStartHiddenStatus[selectedChapter?.id || -1]?.[key] || false;
-  // };
-
-  // /**
-  //  * @function handleOnStartHiddenChange
-  //  * @description Atualiza o estado de "oculto" de um item do "On Start".
-  //  * @param {string} key - A chave do item "On Start".
-  //  * @param {boolean} checked - O novo estado do checkbox (true para oculto, false para não oculto).
-  //  */
-  // const handleOnStartHiddenChange = (key: string, checked: boolean) => {
-  //   if (!selectedChapter) return;
-  //   setOnStartHiddenStatus(prevStatus => ({
-  //     ...prevStatus,
-  //     [selectedChapter.id]: {
-  //       ...prevStatus[selectedChapter.id],
-  //       [key]: checked,
-  //     },
-  //   }));
-  // };
-
   /**
    * @effect Atualiza o localStorage com os dados dos capítulos sempre que a lista de capítulos é alterada.
    */
@@ -473,30 +428,6 @@ const BookEditor: React.FC = () => {
     updatedChoices[choiceIndex] = { ...selectedChapter.choices[choiceIndex], requirement: updatedReq };
     handleChapterChange("choices", updatedChoices);
   };
-
-  // /**
-  //  * @function addOnStart
-  //  * @description Adiciona um novo par chave/valor ao "on_start" do capítulo selecionado.
-  //  */
-  // const addOnStart = () => {
-  //   if (!selectedChapter) return;
-  //   // Gera uma chave única usando um timestamp ou um UUID
-  //   const newKey = `newKey_${Date.now()}`;
-  //   const updatedOnStart = { ...selectedChapter.on_start, "": "" };
-  //   handleChapterChange("on_start", updatedOnStart);
-  // };
-
-  // /**
-  //  * @function removeOnStart
-  //  * @description Remove um item do "on_start" do capítulo selecionado.
-  //  * @param {string} key - A chave do item a ser removido.
-  //  */
-  // const removeOnStart = (key: string) => {
-  //   if (!selectedChapter || !selectedChapter.on_start) return;
-  //   const updatedOnStart = { ...selectedChapter.on_start };
-  //   delete updatedOnStart[key];
-  //   handleChapterChange("on_start", Object.keys(updatedOnStart).length > 0 ? updatedOnStart : undefined);
-  // };
 
   /**
    * @function addChapter
