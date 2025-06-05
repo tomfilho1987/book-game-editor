@@ -5,7 +5,8 @@
  * @version 9.0
  */
 
-import { Chapter } from "../Types/Chapter";
+import { Chapter, OnStartItem } from "../Types/Chapter";
+import { denormalizeOnStartDataForDownload } from "./denormalizeOnStartDataForDownload ";
 
 /**
  * @module saveGameData
@@ -39,30 +40,27 @@ import { Chapter } from "../Types/Chapter";
  */
 export const saveJsonFile = (
     chapters: Chapter[],
-    onStartHiddenStatus: Record<number, Record<string, boolean>>,
     fileName: string = 'livro_jogo.json'
 ) => {
     const getChapterTitleById = (chapterId: number): string | undefined => {
         return chapters.find(c => c.id === chapterId)?.title;
     };
 
-    const getOnStartHiddenStatusLocal = (chapterId: string | number, key: string): boolean => {
-        return onStartHiddenStatus[Number(chapterId)]?.[key] || false;
-    };
-
     const jsonStructure = {
         chapters: chapters.reduce((acc, chapter) => {
-            const updatedOnStart: Record<string, number | string> = {};
-            if (chapter.on_start) {
-                Object.entries(chapter.on_start).forEach(([key, value]) => {
-                    const isHidden = getOnStartHiddenStatusLocal(chapter.id, key);
-                    if (isHidden) {
-                        updatedOnStart["#" + key] = value;
-                    } else {
-                        updatedOnStart[key] = value;
-                    }
-                });
-            }
+            const denormalizedOnStart = denormalizeOnStartDataForDownload(chapter.on_start);
+           
+            // const updatedOnStart: Record<string, number | OnStartItem> = {};
+            // if (chapter.on_start) {
+            //     Object.entries(chapter.on_start).forEach(([key, value]) => {
+            //         const isHidden = getOnStartHiddenStatusLocal(chapter.id, key);
+            //         if (isHidden) {
+            //             updatedOnStart["#" + key] = value;
+            //         } else {
+            //             updatedOnStart[key] = value;
+            //         }
+            //     });
+            // }
 
             const choicesJSON = chapter.choices.map((choice) => {
                 const requirementsObject: Record<string, any> = {};
@@ -112,7 +110,6 @@ export const saveJsonFile = (
                         return targetsArray;
                     })()),
                     text: choice.text,
-                    isStart: chapter.isStartChapter || false,
                     ...(Object.keys(costsObject).length > 0 && { cost: costsObject }),
                     ...(Object.keys(requirementsObject).length > 0 && { requirement: requirementsObject }),
                 };
@@ -123,7 +120,7 @@ export const saveJsonFile = (
                 choices: choicesJSON,
                 image: chapter.image || "",
                 text: chapter.text,
-                ...(Object.keys(updatedOnStart).length > 0 && { on_start: updatedOnStart }),
+                ...(Object.keys(denormalizedOnStart).length > 0 && { on_start: denormalizedOnStart }),
             };
 
             acc[chapter.title] = orderedChapter;

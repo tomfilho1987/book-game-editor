@@ -8,7 +8,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Chapter } from '../Types/Chapter';
+import { Chapter, OnStartItem } from '../Types/Chapter';
 import { IGameConfig, IResource } from '../Interfaces/IGameConfig';
 import { IChapterDataJSON } from '../Interfaces/JSON/IChapterDataJSON';
 import { IChoiceJSON } from '../Interfaces/JSON/IChoiceJSON';
@@ -37,7 +37,56 @@ export const useJsonLoader = ({ setChapters, setSelectedChapter, setLoadedFileNa
         setIsErrorModalOpen(false);
         setErrorModalMessage('');
     }, []);
-        
+
+    const normalizeOnStartData = (rawOnStartJson: Record<string, string | number | { value: string | number; isHidden?: boolean }> | undefined): OnStartItem[] => {
+        const normalizedArray: OnStartItem[] = [];
+
+        if (rawOnStartJson) {
+            Object.entries(rawOnStartJson).forEach(([key, rawValue]) => {
+                let isHidden = false;
+                let resourceKey = key.trim(); // Esta será a OnStartItem.key
+
+                // Determina isHidden com base no prefixo, e limpa a chave
+                if (resourceKey.startsWith('#') || resourceKey.startsWith('@')) {
+                    isHidden = true;
+                    resourceKey = resourceKey.substring(1);
+                }
+                
+                let finalValue: string;
+
+                // Lógica de validação e conversão do valor para string
+                if (typeof rawValue === 'number' || typeof rawValue === 'string') {
+                    finalValue = String(rawValue);
+                } else if (typeof rawValue === 'object' && rawValue !== null) {
+                    if ('isHidden' in rawValue && typeof rawValue.isHidden === 'boolean') {
+                        isHidden = rawValue.isHidden;
+                    }
+                    if ('value' in rawValue && (typeof rawValue.value === 'string' || typeof rawValue.value === 'number')) {
+                        finalValue = String(rawValue.value);
+                    } else {
+                        console.warn(`[normalizeOnStartData] Gatilho '${key}' dentro do objeto tem um valor inesperado para 'value': '${rawValue.value}'. Convertido para string vazia.`);
+                        finalValue = '';
+                    }
+                } else {
+                    console.warn(`[normalizeOnStartData] Gatilho '${key}' tem um valor inesperado: '${rawValue}'. Convertido para string vazia.`);
+                    finalValue = '';
+                }
+
+                if (resourceKey) { // Garante que a chave não é vazia após limpeza
+                    normalizedArray.push({
+                        id: uuidv4(), // <-- GERE UM ID ÚNICO AQUI!
+                        key: resourceKey, // <-- A CHAVE DO RECURSO
+                        value: finalValue,
+                        isHidden: isHidden,
+                    });
+                }
+            });
+        }
+
+        console.log("[normalizeOnStartData] normalized ON_START final:", normalizedArray);
+        return normalizedArray;
+    };
+
     const loadJsonFile = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
@@ -191,12 +240,13 @@ export const useJsonLoader = ({ setChapters, setSelectedChapter, setLoadedFileNa
 
                     const formattedTitle = (Number(jsonId) && !isNaN(Number(jsonId))) ? `Cap ${jsonId}` : jsonId;
 
+                    const processedOnStart = normalizeOnStartData(chapterData.on_start); // <-- Isso agora retorna um array
                     return {
                         id: chapterInternalId,
                         title: formattedTitle,
                         text: chapterData.text || "",
                         choices,
-                        on_start: chapterData.on_start ?? {},
+                        on_start: processedOnStart,
                         isStartChapter: false,
                     } as Chapter; // Explicitamente informa ao TypeScript que o objeto é do tipo Chapter
                 }).filter((chapter): chapter is Chapter => chapter !== null);

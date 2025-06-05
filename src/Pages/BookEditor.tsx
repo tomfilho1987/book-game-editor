@@ -5,7 +5,7 @@
  * @date [Data de Criação]
  * @version 1.0
  */
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Box, Button, Checkbox, Divider, IconButton, FormControlLabel, List, ListItem, ListItemButton, ListItemText, Tab, Tabs, TextField, Typography,
     Autocomplete, createFilterOptions, Accordion, AccordionSummary, AccordionDetails, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, 
     Grid2, Grid} from "@mui/material";
@@ -13,7 +13,8 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import DownloadIcon from '@mui/icons-material/Download';
 import ClearIcon from '@mui/icons-material/Clear';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
-import { Chapter } from "../Types/Chapter";
+import AddIcon from '@mui/icons-material/Add';
+import { Chapter, OnStartItem } from "../Types/Chapter";
 import { Choice } from "../Types/Choice";
 import { IChapterOption } from "../Interfaces/IChapterOption";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -89,111 +90,7 @@ const BookEditor: React.FC = () => {
 
   type RecursoOption = { key: string; label: string; };
 
-  function extrairRecursosDeChoices(chapters: Chapter[]): RecursoOption[] {
-    const map = new Map<string, boolean>();
-
-    chapters.forEach(ch => {
-      ch.choices.forEach(choice => {
-        if (choice.requirement) {
-          Object.values(choice.requirement).forEach(({ key, isHidden }) => {
-            map.set(key, map.get(key) || isHidden); // marca como oculto se algum for oculto
-          });
-        }
-      });
-    });
-
-    return Array.from(map.entries()).map(([key, isHidden]) => ({ key, label: isHidden ? `${key} (Oculto)` : key }));
-  }
-
-  const handleTabChange = (event: React.ChangeEvent<{}>, newValue: number) => {
-    setSelectedTab(newValue);
-  };
-
-  const handleChapterSelect = (chapter: Chapter) => {
-    setSelectedChapter(chapter);
-    setSelectedTab(0); // Define a aba principal para "ESCOLHAS" ao selecionar um capítulo
-  };
-
-  const updateOnStartKey = (oldKey: string, newKey: string, value: number | string) => {
-    if (!selectedChapter || !selectedChapter.on_start) return;
-    const updatedOnStart = { ...selectedChapter.on_start };
-    delete updatedOnStart[oldKey];
-    updatedOnStart[newKey] = value;
-    handleChapterChange("on_start", updatedOnStart);
   
-    // Atualiza o estado de oculto também se a chave mudar
-    setOnStartHiddenStatus(prevStatus => {
-      const chapterStatus = prevStatus[selectedChapter.id];
-      if (chapterStatus && chapterStatus[oldKey] !== undefined) {
-        const newChapterStatus = { ...chapterStatus };
-        newChapterStatus[newKey] = newChapterStatus[oldKey];
-        delete newChapterStatus[oldKey];
-        return { ...prevStatus, [selectedChapter.id]: newChapterStatus };
-      }
-      return prevStatus;
-    });
-  };
-
-  const updateOnStartValue = (key: string, newValue: number | string) => {
-    if (!selectedChapter || !selectedChapter.on_start) return;
-    const updatedOnStart = { ...selectedChapter.on_start, [key]: newValue };
-    handleChapterChange("on_start", updatedOnStart);
-  };
-
-  /**
-   * @function isOnStartHidden
-   * @description Verifica se um item específico do "On Start" está marcado como oculto.
-   * @param {string} key - A chave do item "On Start".
-   * @returns {boolean} - True se o item estiver marcado como oculto, false caso contrário.
-   */
-  const isOnStartHidden = (key: string): boolean => {
-    return onStartHiddenStatus[selectedChapter?.id || -1]?.[key] || false;
-  };
-
-  /**
- * @function handleOnStartHiddenChange
- * @description Atualiza o estado de "oculto" de um item do "On Start".
- * @param {string} key - A chave do item "On Start".
- * @param {boolean} checked - O novo estado do checkbox (true para oculto, false para não oculto).
- */
-  const handleOnStartHiddenChange = (key: string, checked: boolean) => {
-    if (!selectedChapter) return;
-    setOnStartHiddenStatus(prevStatus => ({
-      ...prevStatus,
-      [selectedChapter.id]: {
-        ...prevStatus[selectedChapter.id],
-        [key]: checked,
-      },
-    }));
-  };
-
-  /**
-   * @effect Atualiza o localStorage com os dados dos capítulos sempre que a lista de capítulos é alterada.
-   */
-  useEffect(() => {
-    localStorage.setItem("bookData", JSON.stringify(chapters));
-  }, [chapters]);
-
-  /**
-   * @effect Rola para o final da lista de capítulos quando um novo capítulo é adicionado.
-   */
-  useEffect(() => {
-    if (chapterListRef.current) {
-        chapterListRef.current.scrollTop = chapterListRef.current.scrollHeight;
-    }
-  }, [chapters.length]); // Rola apenas quando o *comprimento* da lista de capítulos muda (adição ou remoção)
-
-  useEffect(() => {
-    if (currentChoice?.targets) {
-      const initialSum = currentChoice.targets.reduce((sum, target) => sum + Number(target.probability), 0);
-      setSumOfProbabilities(initialSum);
-      setProbabilityValidationMessage(initialSum === 100 || currentChoice.targets.length === 0 ? null : `A soma das probabilidades é ${initialSum}%, faltam ${100 - initialSum}%.`);
-    } else {
-      setSumOfProbabilities(0);
-      setProbabilityValidationMessage(null);
-    }
-  }, [currentChapterIndex, currentChoice?.targets]);
-
   /**
    * @function handleChapterChange
    * @description Atualiza o campo especificado do capítulo selecionado e realiza validação no título e texto.
@@ -234,6 +131,226 @@ const BookEditor: React.FC = () => {
       });
     });
   };
+
+  function extrairRecursosDeChoices(chapters: Chapter[]): RecursoOption[] {
+    const map = new Map<string, boolean>();
+
+    chapters.forEach(ch => {
+      ch.choices.forEach(choice => {
+        if (choice.requirement) {
+          Object.values(choice.requirement).forEach(({ key, isHidden }) => {
+            map.set(key, map.get(key) || isHidden); // marca como oculto se algum for oculto
+          });
+        }
+      });
+    });
+
+    return Array.from(map.entries()).map(([key, isHidden]) => ({ key, label: isHidden ? `${key} (Oculto)` : key }));
+  }
+
+  const handleTabChange = (event: React.ChangeEvent<{}>, newValue: number) => {
+    setSelectedTab(newValue);
+  };
+
+  const handleChapterSelect = (chapter: Chapter) => {
+    setSelectedChapter(chapter);
+    setSelectedTab(0); // Define a aba principal para "ESCOLHAS" ao selecionar um capítulo
+  };
+
+  const ensureOnStartItems = (onStartData: Record<string, string | number | { value: string | number; isHidden?: boolean }> | OnStartItem[] | undefined): OnStartItem[] => {
+      if (!onStartData) {
+          return [];
+      }
+
+      if (Array.isArray(onStartData)) {
+        return onStartData.map(item => ({
+          id: item.id || uuidv4(),
+          key: item.key,
+          value: item.value,
+          isHidden: item.isHidden,
+        }));
+      }
+
+      const normalizedArray: OnStartItem[] = [];
+      Object.entries(onStartData).forEach(([key, rawValue]) => {
+        let isHidden = false;
+        let resourceKey = key.trim();
+
+        if (resourceKey.startsWith('#') || resourceKey.startsWith('@')) {
+          isHidden = true;
+          resourceKey = resourceKey.substring(1);
+        }
+        
+        let finalValue: string;
+
+        if (typeof rawValue === 'number' || typeof rawValue === 'string') {
+          finalValue = String(rawValue);
+        } else if (typeof rawValue === 'object' && rawValue !== null) {
+          if ('isHidden' in rawValue && typeof rawValue.isHidden === 'boolean') {
+            isHidden = rawValue.isHidden;
+          }
+          if ('value' in rawValue && (typeof rawValue.value === 'string' || typeof rawValue.value === 'number')) {
+            finalValue = String(rawValue.value);
+          } else {
+            console.warn(`[ensureOnStartItems] Item '${key}' dentro do objeto tem um valor inesperado para 'value': '${rawValue.value}'. Convertido para string vazia.`);
+            finalValue = '';
+          }
+        } else {
+          console.warn(`[ensureOnStartItems] Item '${key}' tem formato inesperado: '${rawValue}'. Convertido para string vazia.`);
+          finalValue = '';
+        }
+
+        if (resourceKey) {
+          normalizedArray.push({
+            id: uuidv4(),
+            key: resourceKey,
+            value: finalValue,
+            isHidden: isHidden,
+          });
+        }
+      });
+      return normalizedArray;
+  };
+
+  /**
+   * @function addOnStart
+   * @description Adiciona um novo par chave/valor ao "on_start" do capítulo selecionado.
+   */
+  const addOnStartItem = useCallback(() => {
+    if (!selectedChapter) return;
+
+    const currentOnStart = ensureOnStartItems(selectedChapter.on_start);
+    const newItem: OnStartItem = {
+      id: uuidv4(),
+      key: "",
+      value: "0",
+      isHidden: false
+    };
+
+    const updatedOnStart = [...currentOnStart, newItem];
+    handleChapterChange("on_start", updatedOnStart);
+  }, [selectedChapter, handleChapterChange]);
+
+  // Função para atualizar um item on_start (seja key, value ou isHidden)
+  const updateOnStartItem = useCallback((idToUpdate: string, field: keyof OnStartItem, newValue: string | boolean) => {
+    if (!selectedChapter) return;
+
+    // Garante que currentOnStart seja um array
+    const currentOnStart = ensureOnStartItems(selectedChapter.on_start);
+    const updatedOnStart = currentOnStart.map(item => {
+        if (item.id === idToUpdate) {
+            if (field === 'key') {
+                const newKeyString = newValue as string;
+                if (!newKeyString.trim()) {
+                    console.warn("Chave do recurso não pode ser vazia.");
+                    return item;
+                }
+                if (currentOnStart.some(existing => existing.key === newKeyString && existing.id !== idToUpdate)) {
+                    console.warn(`Chave '${newKeyString}' já existe.`);
+                    return item;
+                }
+                
+                let newIsHidden = item.isHidden;
+                if (newKeyString.startsWith('#') || newKeyString.startsWith('@')) {
+                    newIsHidden = true;
+                } else if (item.isHidden && !newKeyString.startsWith('#') && !newKeyString.startsWith('@')) {
+                    // Sua lógica para o que acontece se o prefixo é removido
+                }
+
+                return { ...item, key: newKeyString, isHidden: newIsHidden };
+            }
+            return { ...item, [field]: newValue };
+        }
+        return item;
+    });
+
+    handleChapterChange("on_start", updatedOnStart);
+  }, [selectedChapter, handleChapterChange]);
+
+  /**
+   * @function removeOnStartItem
+   * @description Remove um item do "on_start" do capítulo selecionado.
+   * @param {string} idToRemove - A chave do item a ser removido.
+   */
+    const removeOnStartItem = useCallback((idToRemove: string) => {
+        if (!selectedChapter) return;
+        // Garante que currentOnStart seja um array
+        const currentOnStart = ensureOnStartItems(selectedChapter.on_start);
+        const updatedOnStart = currentOnStart.filter(item => item.id !== idToRemove);
+        handleChapterChange("on_start", updatedOnStart);
+    }, [selectedChapter, handleChapterChange]);
+
+  // const updateOnStartValue = (key: string, newValue: string) => {
+  //   if (!selectedChapter) return;
+
+  //   const currentOnStart = ensureOnStartItems(selectedChapter.on_start);
+  //   const existingItem = currentOnStart[key];
+
+  //   if (existingItem) {
+  //       const updatedOnStart: Record<string, OnStartItem> = {
+  //           ...currentOnStart,
+  //           [key]: {
+  //               ...existingItem,
+  //               value: newValue
+  //           }
+  //       };
+  //       handleChapterChange("on_start", updatedOnStart);
+  //   }
+  // };
+
+  // /**
+  //  * @function isOnStartHidden
+  //  * @description Verifica se um item específico do "On Start" está marcado como oculto.
+  //  * @param {string} key - A chave do item "On Start".
+  //  * @returns {boolean} - True se o item estiver marcado como oculto, false caso contrário.
+  //  */
+  // const isOnStartHidden = (key: string): boolean => {
+  //   return onStartHiddenStatus[selectedChapter?.id || -1]?.[key] || false;
+  // };
+
+  // /**
+  //  * @function handleOnStartHiddenChange
+  //  * @description Atualiza o estado de "oculto" de um item do "On Start".
+  //  * @param {string} key - A chave do item "On Start".
+  //  * @param {boolean} checked - O novo estado do checkbox (true para oculto, false para não oculto).
+  //  */
+  // const handleOnStartHiddenChange = (key: string, checked: boolean) => {
+  //   if (!selectedChapter) return;
+  //   setOnStartHiddenStatus(prevStatus => ({
+  //     ...prevStatus,
+  //     [selectedChapter.id]: {
+  //       ...prevStatus[selectedChapter.id],
+  //       [key]: checked,
+  //     },
+  //   }));
+  // };
+
+  /**
+   * @effect Atualiza o localStorage com os dados dos capítulos sempre que a lista de capítulos é alterada.
+   */
+  useEffect(() => {
+    localStorage.setItem("bookData", JSON.stringify(chapters));
+  }, [chapters]);
+
+  /**
+   * @effect Rola para o final da lista de capítulos quando um novo capítulo é adicionado.
+   */
+  useEffect(() => {
+    if (chapterListRef.current) {
+        chapterListRef.current.scrollTop = chapterListRef.current.scrollHeight;
+    }
+  }, [chapters.length]); // Rola apenas quando o *comprimento* da lista de capítulos muda (adição ou remoção)
+
+  useEffect(() => {
+    if (currentChoice?.targets) {
+      const initialSum = currentChoice.targets.reduce((sum, target) => sum + Number(target.probability), 0);
+      setSumOfProbabilities(initialSum);
+      setProbabilityValidationMessage(initialSum === 100 || currentChoice.targets.length === 0 ? null : `A soma das probabilidades é ${initialSum}%, faltam ${100 - initialSum}%.`);
+    } else {
+      setSumOfProbabilities(0);
+      setProbabilityValidationMessage(null);
+    }
+  }, [currentChapterIndex, currentChoice?.targets]);
 
   /**
    * @function addChoice
@@ -357,29 +474,29 @@ const BookEditor: React.FC = () => {
     handleChapterChange("choices", updatedChoices);
   };
 
-  /**
-   * @function addOnStart
-   * @description Adiciona um novo par chave/valor ao "on_start" do capítulo selecionado.
-   */
-  const addOnStart = () => {
-    if (!selectedChapter) return;
-    // Gera uma chave única usando um timestamp ou um UUID
-    const newKey = `newKey_${Date.now()}`;
-    const updatedOnStart = { ...selectedChapter.on_start, "": "" };
-    handleChapterChange("on_start", updatedOnStart);
-  };
+  // /**
+  //  * @function addOnStart
+  //  * @description Adiciona um novo par chave/valor ao "on_start" do capítulo selecionado.
+  //  */
+  // const addOnStart = () => {
+  //   if (!selectedChapter) return;
+  //   // Gera uma chave única usando um timestamp ou um UUID
+  //   const newKey = `newKey_${Date.now()}`;
+  //   const updatedOnStart = { ...selectedChapter.on_start, "": "" };
+  //   handleChapterChange("on_start", updatedOnStart);
+  // };
 
-  /**
-   * @function removeOnStart
-   * @description Remove um item do "on_start" do capítulo selecionado.
-   * @param {string} key - A chave do item a ser removido.
-   */
-  const removeOnStart = (key: string) => {
-    if (!selectedChapter || !selectedChapter.on_start) return;
-    const updatedOnStart = { ...selectedChapter.on_start };
-    delete updatedOnStart[key];
-    handleChapterChange("on_start", Object.keys(updatedOnStart).length > 0 ? updatedOnStart : undefined);
-  };
+  // /**
+  //  * @function removeOnStart
+  //  * @description Remove um item do "on_start" do capítulo selecionado.
+  //  * @param {string} key - A chave do item a ser removido.
+  //  */
+  // const removeOnStart = (key: string) => {
+  //   if (!selectedChapter || !selectedChapter.on_start) return;
+  //   const updatedOnStart = { ...selectedChapter.on_start };
+  //   delete updatedOnStart[key];
+  //   handleChapterChange("on_start", Object.keys(updatedOnStart).length > 0 ? updatedOnStart : undefined);
+  // };
 
   /**
    * @function addChapter
@@ -433,204 +550,6 @@ const BookEditor: React.FC = () => {
     }
   }
 
-//   /**
-//    * @function loadJsonFile
-//    * @description Carrega os dados do arquivo JSON selecionado e atualiza o estado dos capítulos.
-//    */
-// const loadJsonFile = (event: React.ChangeEvent<HTMLInputElement>) => {
-//     const file = event.target.files?.[0];
-//     if (!file) return;
-
-//     const reader = new FileReader();
-//     reader.onload = (e) => {
-//         try {
-//             const jsonData = JSON.parse(e.target?.result as string);
-
-//             if (!jsonData || typeof jsonData.chapters !== 'object') {
-//                 throw new Error("Formato inválido: objeto 'chapters' não encontrado.");
-//             }
-
-//             const rawStartChapterKey = jsonData.start; // O ID inicial do JSON (ex: "intro" ou "start")
-
-//             // 1. Criar um mapeamento de IDs do JSON para IDs numéricos internos
-//             const chapterIdMap = new Map<string | number, number>();
-//             let nextNumericId = 1; // Começa de 1 ou do maior ID numérico existente se preferir
-
-//             // Primeiro, preenche o mapa com IDs numéricos existentes e IDs alfanuméricos
-//             Object.keys(jsonData.chapters).forEach(jsonId => {
-//                 const numericId = Number(jsonId);
-//                 if (!isNaN(numericId)) {
-//                     // Se já é um número, usa ele mesmo
-//                     chapterIdMap.set(jsonId, numericId);
-//                     if (numericId >= nextNumericId) {
-//                         nextNumericId = numericId + 1; // Garante que novos IDs sejam maiores
-//                     }
-//                 } else {
-//                     // Se for string alfanumérica, atribui um novo ID numérico sequencial
-//                     chapterIdMap.set(jsonId, nextNumericId);
-//                     nextNumericId++;
-//                 }
-//             });
-
-//             // Converte o startChapterKey para o ID numérico interno
-//             const startChapterId = chapterIdMap.get(rawStartChapterKey);
-//             if (startChapterId === undefined) {
-//                 console.warn(`Capítulo inicial '${rawStartChapterKey}' não encontrado no JSON. O primeiro capítulo carregado será marcado como inicial.`);
-//                 // Poderia definir um valor padrão ou lançar um erro
-//             }
-
-//             const loadedDefaultResources: IResource[] = [];
-//             if (jsonData.default_resources && typeof jsonData.default_resources === 'object') {
-//                 Object.entries(jsonData.default_resources).forEach(([key, value]) => {
-//                     let isHidden = false;
-//                     let cleanedKey = key;
-
-//                     if (key.startsWith('#') || key.startsWith('@')) {
-//                         isHidden = true;
-//                         cleanedKey = key.substring(1);
-//                     }
-
-//                     loadedDefaultResources.push({
-//                         key: cleanedKey,
-//                         value: Number(value),
-//                         isHidden: isHidden,
-//                     });
-//                 });
-//             }
-
-//             const loadedChapters = Object.entries(jsonData.chapters).map(([jsonId, chapterDataUnknown]) => {
-//                 const chapterData = chapterDataUnknown as IChapterDataJSON;
-//                 const chapterInternalId = chapterIdMap.get(jsonId);
-
-//                 // Se por algum motivo não encontrou o ID no mapa (o que não deveria acontecer se o mapa for bem construído)
-//                 if (chapterInternalId === undefined) {
-//                     console.error(`Erro: Capítulo '${jsonId}' não possui um ID numérico mapeado.`);
-//                     // Lidar com o erro ou atribuir um ID padrão (e.g., -1)
-//                     return null; // Ou lançar um erro, ou continuar e filtrar depois
-//                 }
-
-//                 const choices = Array.isArray(chapterData.choices)
-//                     ? chapterData.choices.map((choiceJSON: IChoiceJSON) => {
-//                         const rawTargets = choiceJSON.targets ?? [];
-
-//                         let normalizedTargets: { targetId: number; probability: number }[] = []; // targetId agora é sempre number
-
-//                         if (rawTargets.length > 0) {
-//                             if (typeof rawTargets[0] === "object" && "targetId" in rawTargets[0]) {
-//                                 // Formato com probabilidade explícita: [{ targetId: "heads", probability: 50 }]
-//                                 normalizedTargets = (rawTargets as { targetId: unknown; probability: unknown }[])
-//                                     .map(t => {
-//                                         const mappedTargetId = chapterIdMap.get(String(t.targetId)); // Converte para string para buscar no mapa
-//                                         return {
-//                                             targetId: mappedTargetId !== undefined ? mappedTargetId : -1, // Use -1 ou outro valor para erro
-//                                             probability: Number(t.probability),
-//                                         };
-//                                     })
-//                                     .filter(t => t.targetId !== -1); // Filtra destinos inválidos
-//                             } else {
-//                                 // Formato simples: ["tails", "heads"] ou ["2", "3"]
-//                                 normalizedTargets = (rawTargets as (string | number)[])
-//                                     .map(rawTarget => {
-//                                         const mappedTargetId = chapterIdMap.get(String(rawTarget)); // Converte para string para buscar no mapa
-//                                         return {
-//                                             targetId: mappedTargetId !== undefined ? mappedTargetId : -1,
-//                                             probability: 100 / rawTargets.length,
-//                                         };
-//                                     })
-//                                     .filter(t => t.targetId !== -1); // Filtra destinos inválidos
-//                             }
-//                         }
-
-//                         let combinedRequirements: Record<string, RequirementDetail> = {};
-
-//                         if (choiceJSON.requirement) {
-//                             Object.entries(choiceJSON.requirement).forEach(([reqKey, reqValue]) => {
-//                                 let isHiddenRequirement = false;
-//                                 let cleanedReqKey = reqKey;
-
-//                                 if (reqKey.startsWith('#') || reqKey.startsWith('@')) {
-//                                     isHiddenRequirement = true;
-//                                     cleanedReqKey = reqKey.substring(1);
-//                                 }
-
-//                                 const newRequirementId = uuidv4();
-//                                 combinedRequirements[newRequirementId] = {
-//                                     key: cleanedReqKey,
-//                                     value: reqValue as number | string,
-//                                     isCost: false,
-//                                     isHidden: isHiddenRequirement,
-//                                     id: newRequirementId,
-//                                 };
-//                             });
-//                         }
-
-//                         if (choiceJSON.cost) {
-//                             Object.entries(choiceJSON.cost).forEach(([costKey, costValue]) => {
-//                                 let isHiddenCost = false;
-//                                 let cleanedCostKey = costKey;
-
-//                                 if (costKey.startsWith('#') || costKey.startsWith('@')) {
-//                                     isHiddenCost = true;
-//                                     cleanedCostKey = costKey.substring(1);
-//                                 }
-
-//                                 const newCostId = uuidv4();
-//                                 combinedRequirements[newCostId] = {
-//                                     key: cleanedCostKey,
-//                                     value: costValue as number | string,
-//                                     isCost: true,
-//                                     isHidden: isHiddenCost,
-//                                     id: newCostId,
-//                                 };
-//                             });
-//                         }
-
-//                         return {
-//                             id: uuidv4(),
-//                             text: choiceJSON.text || "",
-//                             targets: normalizedTargets,
-//                             requirement: Object.keys(combinedRequirements).length > 0 ? combinedRequirements : undefined,
-//                         };
-//                     })
-//                     : [];
-
-//                 const formattedTitle = (Number(jsonId) && !isNaN(Number(jsonId))) ? `Cap ${jsonId}` : jsonId; // Mantém "heads", "start" como título se não for número
-
-//                 return {
-//                     id: chapterInternalId, // <-- Agora o ID do capítulo é sempre um número
-//                     title: formattedTitle,
-//                     text: chapterData.text || "",
-//                     choices,
-//                     on_start: chapterData.on_start ?? {},
-//                     isStartChapter: false,
-//                 };
-//             }).filter(chapter => chapter !== null) as Chapter[]; // Filtra nulls se houver, e garante o tipo Chapter[]
-
-//             const chaptersWithStartFlag = loadedChapters.map(chapter => {
-//                 // A comparação é agora com o ID numérico
-//                 if (chapter.id === startChapterId) {
-//                     return { ...chapter, isStartChapter: true };
-//                 }
-//                 return chapter;
-//             });
-
-//             setConfig(prevConfig => ({
-//                 ...prevConfig,
-//                 default_resources: loadedDefaultResources,
-//             }));
-
-//             setChapters(chaptersWithStartFlag);
-//             // Ao selecionar o capítulo inicial, use o ID numérico
-//             setSelectedChapter(chaptersWithStartFlag.find(c => c.id === startChapterId) || (chaptersWithStartFlag.length > 0 ? chaptersWithStartFlag[0] : null));
-//             setLoadedFileName(file.name);
-//         } catch (error) {
-//           setDialogInfo({ ...dialogInfo, open: true, message: "Erro ao carregar o arquivo JSON. Por favor, verificar se escolheu o arquivo com a extensão '.json'."});
-//         }
-//     };
-
-//     reader.readAsText(file);
-// };
-   
   /**
    * @function handleSaveClick
    * @description Abre o popup de confirmação para salvar o arquivo.
@@ -655,7 +574,7 @@ const BookEditor: React.FC = () => {
 
     const validationResult = validarProbabilidades(chapters);
     if (validationResult === true) {
-        saveJsonFile(chapters, onStartHiddenStatus, 'historia.json');
+        saveJsonFile(chapters, 'historia.json');
     } else if (typeof validationResult === 'string') {
       setDialogInfo({ ...dialogInfo, open: true,  message: validationResult });
     }
@@ -733,6 +652,7 @@ const BookEditor: React.FC = () => {
 
   const handleOpenMindMap = () => setOpenMindMapModal(true);
   const handleCloseMindMap = () => setOpenMindMapModal(false);
+  const onStartItems = ensureOnStartItems(selectedChapter?.on_start);
   
   return (
       <Grid2 container sx={{ minHeight: 1, mt: 2 }}>
@@ -783,10 +703,10 @@ const BookEditor: React.FC = () => {
                   Carregar
                 </Button>
               </label>
-              {/* <Divider sx={{ my: 2 }} />
+              <Divider sx={{ my: 2 }} />
               <Button variant="outlined" onClick={handleOpenMindMap} fullWidth style={{ display: !(chapters.length > 0) ? "none" : "block" }} >
                 Mostrar Mapa Mental
-              </Button> */}
+              </Button>
             </Box>
           </Box>
         </Grid2>
@@ -1082,8 +1002,8 @@ const BookEditor: React.FC = () => {
                                   }
                                   <Grid container>
                                     <Grid item md={3}>
-                                      <Button variant="outlined" onClick={() => addRequirementToChoice(index)}>
-                                          ➕ Adicionar Recurso
+                                      <Button variant="contained" onClick={() => addRequirementToChoice(index)} startIcon={<AddIcon />}>
+                                        Adicionar Recurso
                                       </Button>
                                     </Grid>
                                   </Grid>
@@ -1091,8 +1011,8 @@ const BookEditor: React.FC = () => {
                           </Accordion>
                         </Box>
                       ))}
-                      <Button variant="outlined" onClick={addChoice} sx={{ mt: 2 }}>
-                      ➕ Adicionar Escolha
+                      <Button variant="contained" onClick={addChoice} sx={{ mt: 2 }} startIcon={<AddIcon />}>
+                        Adicionar Escolha
                       </Button>
                   </Box>
                 )}
@@ -1100,42 +1020,100 @@ const BookEditor: React.FC = () => {
                 {/* Gatilhos do capítulo */}
                 {selectedTab === 1 && (
                   <Box sx={{ mt: 3 }}>
-                      {selectedChapter.on_start && (
-                          Object.entries(selectedChapter.on_start).map(([key, value], index) => (
-                            <Box key={`<span class="math-inline">\{key\}\-</span>{index}`} sx={{ mb: 2 }}> {/* Adiciona margem inferior para separar os itens */}
-                              <FormControlLabel
-                                control={
+                    {onStartItems.map((item, index) => (
+                      <Box key={item.id} sx={{ mb: 2, border: '1px solid #ddd', p: 2, borderRadius: '4px' }}> {/* Use item.id como key */}
+                          <FormControlLabel
+                              control={
                                   <Checkbox
-                                    checked={isOnStartHidden(key)}
-                                    onChange={(e) => handleOnStartHiddenChange(key, e.target.checked)}
+                                      checked={item.isHidden}
+                                      onChange={(e) => updateOnStartItem(item.id, 'isHidden', e.target.checked)}
                                   />
-                                }
-                                label="Oculto?"
-                              />
-                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                <TextField
+                              }
+                              label="Oculto"
+                          />
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <TextField
                                   label="Recurso"
-                                  value={key}
-                                  onChange={(e) => updateOnStartKey(key, e.target.value, value)}
+                                  value={item.key} // O valor agora é item.key
+                                  onChange={(e) => updateOnStartItem(item.id, 'key', e.target.value)}
                                   sx={{ mr: 1, width: "300px" }}
-                                />
-                                <TextField
+                              />
+                              <TextField
                                   label="Valor"
-                                  value={value}
-                                  onChange={(e) => updateOnStartValue(key, e.target.value)}
+                                  value={item.value}
+                                  onChange={(e) => updateOnStartItem(item.id, 'value', e.target.value)}
+                                  type="text" // Pode ser string, então 'text' é seguro
                                   sx={{ mr: 1 }}
-                                />
-
-                                <IconButton onClick={() => removeOnStart(key)}>
-                                    <DeleteIcon color="error" />
-                                </IconButton>
+                              />
+                              <IconButton onClick={() => removeOnStartItem(item.id)}>
+                                  <DeleteIcon />
+                              </IconButton>
+                          </Box>
+                      </Box>
+                    ))}
+                      <Button variant="contained" sx={{ mt: 1 }} onClick={addOnStartItem} startIcon={<AddIcon />}>
+                        Adicionar Gatilho
+                      </Button>
+                      {/* {selectedChapter.on_start && (
+                        Object.entries(ensureOnStartItems(selectedChapter.on_start)).map(([key, item], index) => {
+                          console.log(`Rendering TextField for key: '${key}', item.id: '${item.id}'`);
+                          return (
+                              <Box key={item.id} sx={{ mb: 2 }}>
+                                  <FormControlLabel
+                                      control={
+                                          <Checkbox
+                                              checked={item.isHidden}
+                                              onChange={(e) => {
+                                                  if (!selectedChapter) return;
+                                                  const currentOnStart = ensureOnStartItems(selectedChapter.on_start);
+                                                  const existingItem = currentOnStart[key]; // key do map é o nome do recurso
+                                                  if (existingItem) {
+                                                      const updatedOnStart: Record<string, OnStartItem> = {
+                                                          ...currentOnStart,
+                                                          [key]: { // Atualize o item pelo nome do recurso
+                                                              ...existingItem,
+                                                              isHidden: e.target.checked
+                                                          }
+                                                      };
+                                                      handleChapterChange("on_start", updatedOnStart);
+                                                      // Se você ainda precisa de setOnStartHiddenStatus por algum motivo, atualize-o
+                                                      setOnStartHiddenStatus(prevStatus => ({
+                                                          ...prevStatus,
+                                                          [selectedChapter.id]: {
+                                                              ...(prevStatus[selectedChapter.id] || {}),
+                                                              [key]: e.target.checked
+                                                          }
+                                                      }));
+                                                  }
+                                              }}
+                                          />
+                                      }
+                                      label="Oculto"
+                                  />
+                                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                      <TextField
+                                          label="Recurso"
+                                          value={key} // O valor exibido ainda é a chave (nome do recurso)
+                                          onChange={(e) => updateOnStartKey(key, e.target.value)}
+                                          sx={{ mr: 1, width: "300px" }}
+                                      />
+                                      <TextField
+                                          label="Valor"
+                                          value={item.value}
+                                          onChange={(e) => updateOnStartValue(key, e.target.value)}
+                                          sx={{ mr: 1 }}
+                                      />
+                                      <IconButton onClick={() => removeOnStart(key)}>
+                                          <DeleteIcon />
+                                      </IconButton>
+                                  </Box>
                               </Box>
-                            </Box>
-                        ))
+                          );
+                        })
                       )}
                       <Button variant="outlined" sx={{ mt: 1 }} onClick={addOnStart}>
                           ➕ Adicionar Gatilho
-                      </Button>
+                      </Button> */}
                   </Box>
                 )}
               </>

@@ -14,7 +14,7 @@ const validateChoices = (chapters: Chapter[]): { isValid: boolean; message: stri
       let isInvalid = false;
       const invalidChoiceInfo: { chapterTitle: string; choiceName?: string; hasNoText?: boolean; hasNoTarget?: boolean } = {
         chapterTitle: chapter.title,
-        choiceName: choice.name, // Tenta pegar o nome da escolha
+        choiceName: choice.text, // Tenta pegar o nome da escolha
       };
 
       if (!choice.text || choice.text.trim() === '') {

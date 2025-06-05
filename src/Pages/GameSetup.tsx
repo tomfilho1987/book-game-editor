@@ -177,6 +177,31 @@ const GameSetup: React.FC = () => {
     }, [conditionList]);
 
     /**
+     * @function isValidSectionData
+     * @description Verifica se um dado (objeto ou array) contém informações significativas.
+     * Retorna `false` se o dado for nulo, indefinido, um array vazio ou um objeto vazio.
+     * Para outros tipos primitivos (string, number, boolean), considera-os válidos se não forem nulos/indefinidos.
+     * @param {any} data - O dado a ser validado. Pode ser um objeto, array, string, number, etc.
+     * @returns {boolean} Retorna `true` se o dado contém informações, `false` caso contrário.
+     */
+    const isValidSectionData = (data: any): boolean => {
+        if (data === null || typeof data === 'undefined') {
+            return false;
+        }
+
+        if (typeof data === 'object') {
+            // Se for um array, verifica o tamanho
+            if (Array.isArray(data)) {
+                return data.length > 0;
+            }
+            // Se for um objeto, verifica se tem chaves
+            return Object.keys(data).length > 0;
+        }
+
+        return true;
+    };
+
+    /**
      * @function handleFileUpload
      * @description Lida com o upload do arquivo JSON e atualiza o estado.
      */
@@ -187,9 +212,41 @@ const GameSetup: React.FC = () => {
         const reader = new FileReader();
         reader.onload = (event) => {
             try {
+                debugger
                 const result = event.target?.result as string;
                 const parsed = JSON.parse(result);
 
+// Validação inicial da estrutura principal
+                if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) ||
+                    !('default_resources' in parsed) || !('conditions' in parsed)) {
+                    setDialogInfo({
+                        ...dialogInfo,
+                        open: true,
+                        message: 'O arquivo JSON selecionado não está no formato esperado. Ele deve conter as chaves "default_resources" e "conditions" como objetos ou arrays.'
+                    });
+                    return;
+                }
+
+                // Validação unificada para a estrutura e conteúdo das seções principais
+                const requiredSections = ['default_resources', 'conditions'];
+                let validationMessage = '';
+
+                for (const section of requiredSections) {
+                    if (!(section in parsed) || !isValidSectionData(parsed[section])) {
+                        validationMessage = `A seção "${section}" no arquivo JSON está ausente, vazia ou mal formatada. Por favor, verifique o conteúdo.`;
+                        break; // Sai do loop assim que encontrar a primeira seção inválida
+                    }
+                }
+
+                if (validationMessage) {
+                    setDialogInfo({
+                        ...dialogInfo,
+                        open: true,
+                        message: validationMessage
+                    });
+                    return;
+                }
+                
                 const resources: IResource[] = Object.entries(parsed.default_resources || {}).map(([key, value]) => {
                     const isHidden = key.startsWith("#") || key.startsWith("@");
                     const cleanedKey = isHidden ? key.substring(1) : key;
