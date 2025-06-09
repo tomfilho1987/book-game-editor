@@ -245,6 +245,7 @@ export const useJsonLoader = ({ setChapters, setSelectedChapter, setLoadedFileNa
                         id: chapterInternalId,
                         title: formattedTitle,
                         text: chapterData.text || "",
+                        image: chapterData.image || "",
                         choices,
                         on_start: processedOnStart,
                         isStartChapter: false,
