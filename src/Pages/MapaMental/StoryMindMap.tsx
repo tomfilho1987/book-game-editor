@@ -1,4 +1,11 @@
-// src/components/StoryMindMap.tsx
+/**
+ * @file StoryMindMap.tsx
+ * @description Componente responsável por exibir o mapa mental da história.
+ * @author Airton Filho
+ * @date [Data de Criação]
+ * @version 1.0
+ */
+
 import React, { useCallback, useMemo } from 'react';
 import ReactFlow, {
   Controls,
@@ -15,17 +22,16 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 
 import dagre from 'dagre';
-import { v4 as uuidv4 } from 'uuid'; // Para gerar IDs únicos
+import { v4 as uuidv4 } from 'uuid';
 
 import CustomChapterNode from './CustomChapterNode';
-import { Chapter } from '../../Types/Chapter';
+import { Chapter, OnStartItem } from '../../Types/Chapter'; // Importe OnStartItem
 import { RequirementDetail } from '../../Types/Choice';
 import { StoryEdgeData, StoryNodeData } from '../../Interfaces/MindInterface/map';
 
 const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
 
-// Volte para tamanhos mais moderados
 const nodeWidth = 250;
 const nodeHeight = 120;
 
@@ -33,8 +39,8 @@ const getLayoutedElements = (nodes: any[], edges: any[], direction = 'TB') => {
   const isHorizontal = direction === 'LR';
   dagreGraph.setGraph({
     rankdir: direction,
-    ranksep: 150,   // Espaçamento vertical entre os níveis
-    nodesep: 80     // Espaçamento horizontal entre os nós
+    ranksep: 150,
+    nodesep: 80
   });
 
   nodes.forEach((node) => {
@@ -63,173 +69,185 @@ const getLayoutedElements = (nodes: any[], edges: any[], direction = 'TB') => {
   return { nodes, edges };
 };
 
-
 interface StoryMindMapProps {
-    chapters: Chapter[];
+  chapters: Chapter[];
+  // Adicione esta prop para permitir a seleção de nós, se você ainda não o fez no BookEditor
+  onNodeClick?: (chapterId: string | number) => void;
 }
 
-const StoryMindMap: React.FC<StoryMindMapProps> = ({ chapters }) => {
+const StoryMindMap: React.FC<StoryMindMapProps> = ({ chapters, onNodeClick }) => {
 
-    const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
-        const nodes: any[] = [];
-        const edges: any[] = [];
-        const addedNodes = new Set<number>();
-        // Map para coletar recursos de entrada para cada ID de capítulo de destino
-        const incomingResourcesMap = new Map<number, Record<string, RequirementDetail>>();
+  const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
+    const nodes: any[] = [];
+    const edges: any[] = [];
+    const addedNodes = new Set<string>(); // Mude para Set<string> para IDs
+    const incomingResourcesMap = new Map<string, Record<string, RequirementDetail>>(); // Mude para Map<string, ...>
 
-        chapters.forEach(chapter => {
-            // Inicializar nó para o capítulo (se ainda não adicionado)
-            if (!addedNodes.has(chapter.id)) {
-                nodes.push({
-                    id: String(chapter.id),
-                    data: {
-                        label: chapter.title,
-                        isStartChapter: chapter.isStartChapter,
-                        // 'incomingChoiceResources' será preenchido na segunda passagem
-                    } as StoryNodeData,
-                    position: { x: 0, y: 0 },
-                    type: 'customNode',
-                });
-                addedNodes.add(chapter.id);
-            }
+    chapters.forEach(chapter => {
+      // Garante que o ID do capítulo seja uma string para o nó
+      const chapterNodeId = String(chapter.id);
 
-            // Processar escolhas para popular arestas e COLETAR recursos de entrada
-            chapter.choices.forEach(choice => {
-                choice.targets.forEach(target => {
-                    const targetChapterId = target.targetId;
+      // Inicializar nó para o capítulo (se ainda não adicionado)
+      if (!addedNodes.has(chapterNodeId)) {
+        nodes.push({
+          id: chapterNodeId,
+          data: {
+            label: chapter.title,
+            text: chapter.text, // <--- ADICIONADO: Texto do capítulo
+            image: chapter.image, // <--- ADICIONADO: Nome da imagem
+            isStartChapter: chapter.isStartChapter,
+            processedOnStartResources: chapter.on_start as OnStartItem[], // <--- ADICIONADO: Recursos on_start
+          } as StoryNodeData,
+          position: { x: 0, y: 0 },
+          type: 'customNode',
+        });
+        addedNodes.add(chapterNodeId);
+      }
 
-                    // Garantir que o nó de destino exista (se ainda não adicionado)
-                    if (!addedNodes.has(targetChapterId)) {
-                        const targetChapter = chapters.find(c => c.id === targetChapterId);
-                        const targetLabel = targetChapter ? targetChapter.title : `Cap ${targetChapterId}`;
-                        nodes.push({
-                            id: String(targetChapterId),
-                            data: { label: targetLabel } as StoryNodeData,
-                            position: { x: 0, y: 0 },
-                            type: 'customNode',
-                        });
-                        addedNodes.add(targetChapterId);
-                    }
+      // Processar escolhas para popular arestas e COLETAR recursos de entrada
+      chapter.choices.forEach(choice => {
+        choice.targets.forEach(target => {
+          const targetChapterId = String(target.targetId); // Converter ID de destino para string
 
-                    // --- COLETAR requisitos e custos da escolha atual para o capítulo de destino ---
-                    if (choice.requirement) { // choice.requirement já contém reqs e custos
-                        const existingResources = incomingResourcesMap.get(targetChapterId) || {};
-                        Object.values(choice.requirement).forEach(detail => {
-                            // Usar key + isCost como uma chave única para evitar duplicatas de recursos
-                            // (e.g., se duas escolhas diferentes adicionam 'moeda', queremos apenas uma entrada 'moeda')
-                            const uniqueKey = `${detail.key}-${detail.isCost ? 'cost' : 'req'}`;
-                            existingResources[uniqueKey] = { // Substitui se já existir, agregando
-                                id: uuidv4(), // Novo ID para a entrada agregada
-                                key: detail.key,
-                                value: detail.value,
-                                isCost: detail.isCost,
-                                isHidden: detail.isHidden,
-                            };
-                        });
-                        incomingResourcesMap.set(targetChapterId, existingResources);
-                    }
-                    // --- Fim da Coleta ---
+          // Garantir que o nó de destino exista (se ainda não adicionado)
+          if (!addedNodes.has(targetChapterId)) {
+            const targetChapter = chapters.find(c => String(c.id) === targetChapterId);
+            const targetLabel = targetChapter ? targetChapter.title : `Cap ${targetChapterId}`;
 
-                    // *** Lógica para arestas (mantém limpo, sem info de recursos no label) ***
-                    const currentRequirementsForEdgeData: Record<string, RequirementDetail> = {};
-                    const currentCostsForEdgeData: Record<string, RequirementDetail> = {};
-                    if (choice.requirement) {
-                        Object.entries(choice.requirement).forEach(([_id, detail]) => {
-                            if (detail.isCost) {
-                                currentCostsForEdgeData[detail.key] = detail;
-                            } else {
-                                currentRequirementsForEdgeData[detail.key] = detail;
-                            }
-                        });
-                    }
-
-                    let edgeLabelParts: string[] = [choice.text];
-                    if (target.probability !== undefined && target.probability !== 100) {
-                        edgeLabelParts.push(`(${target.probability}%)`);
-                    }
-                    const finalEdgeLabel = edgeLabelParts.join(' ');
-
-                    let edgeStrokeColor = '#999';
-                    let strokeWidth = 1;
-
-                    if (target.probability !== undefined) {
-                        if (target.probability >= 70) {
-                            edgeStrokeColor = '#22c55e';
-                        } else if (target.probability >= 30) {
-                            edgeStrokeColor = '#facc15';
-                        } else {
-                            edgeStrokeColor = '#ef4444';
-                        }
-                        strokeWidth = (target.probability / 30) + 1;
-                    }
-
-                    // Arestas ainda podem ter estilo baseado na presença de recursos
-                    if (Object.keys(currentRequirementsForEdgeData).length > 0 || Object.keys(currentCostsForEdgeData).length > 0) {
-                        edgeStrokeColor = edgeStrokeColor === '#999' ? '#555' : edgeStrokeColor;
-                        strokeWidth = Math.max(strokeWidth, 2);
-                    }
-
-                    edges.push({
-                        id: `e${chapter.id}-${targetChapterId}-${choice.id}`,
-                        source: String(chapter.id),
-                        target: String(targetChapterId),
-                        label: finalEdgeLabel,
-                        type: 'smoothstep',
-                        markerEnd: { type: MarkerType.ArrowClosed },
-                        style: { stroke: edgeStrokeColor, strokeWidth: strokeWidth },
-                        data: {
-                            label: choice.text,
-                            probability: target.probability,
-                            // Mantenha para tooltips ou inspeção da aresta, se necessário
-                            requirements: Object.keys(currentRequirementsForEdgeData).length > 0 ? currentRequirementsForEdgeData : undefined,
-                            costs: Object.keys(currentCostsForEdgeData).length > 0 ? currentCostsForEdgeData : undefined,
-                        } as StoryEdgeData,
-                    });
-                });
+            nodes.push({
+              id: targetChapterId,
+              data: {
+                label: targetLabel,
+                text: targetChapter ? targetChapter.text : '', // <--- ADICIONADO: Texto do capítulo de destino
+                image: targetChapter ? targetChapter.image : undefined, // <--- ADICIONADO: Imagem do capítulo de destino
+                isStartChapter: targetChapter?.isStartChapter || false,
+                processedOnStartResources: targetChapter?.on_start as OnStartItem[], // <--- ADICIONADO: Recursos on_start do capítulo de destino
+              } as StoryNodeData,
+              position: { x: 0, y: 0 },
+              type: 'customNode',
             });
-        });
+            addedNodes.add(targetChapterId);
+          }
 
-        // --- PASSO FINAL: Atualizar nós com recursos de entrada agregados ---
-        nodes.forEach(node => {
-            const chapterId = Number(node.id); // Converter ID do nó de volta para número
-            if (incomingResourcesMap.has(chapterId)) {
-                node.data.incomingChoiceResources = incomingResourcesMap.get(chapterId);
+          if (choice.requirement) {
+            const existingResources = incomingResourcesMap.get(targetChapterId) || {};
+            Object.values(choice.requirement).forEach(detail => {
+              const uniqueKey = `${detail.key}-${detail.isCost ? 'cost' : 'req'}`;
+              existingResources[uniqueKey] = {
+                id: uuidv4(),
+                key: detail.key,
+                value: detail.value,
+                isCost: detail.isCost,
+                isHidden: detail.isHidden,
+              };
+            });
+            incomingResourcesMap.set(targetChapterId, existingResources);
+          }
+
+          const currentRequirementsForEdgeData: Record<string, RequirementDetail> = {};
+          const currentCostsForEdgeData: Record<string, RequirementDetail> = {};
+          if (choice.requirement) {
+            Object.entries(choice.requirement).forEach(([_id, detail]) => {
+              if (detail.isCost) {
+                currentCostsForEdgeData[detail.key] = detail;
+              } else {
+                currentRequirementsForEdgeData[detail.key] = detail;
+              }
+            });
+          }
+
+          let edgeLabelParts: string[] = [choice.text];
+          if (target.probability !== undefined && target.probability !== 100) {
+            edgeLabelParts.push(`(${target.probability}%)`);
+          }
+          const finalEdgeLabel = edgeLabelParts.join(' ');
+
+          let edgeStrokeColor = '#999';
+          let strokeWidth = 1;
+
+          if (target.probability !== undefined) {
+            if (target.probability >= 70) {
+              edgeStrokeColor = '#22c55e';
+            } else if (target.probability >= 30) {
+              edgeStrokeColor = '#facc15';
+            } else {
+              edgeStrokeColor = '#ef4444';
             }
+            strokeWidth = (target.probability / 30) + 1;
+          }
+
+          if (Object.keys(currentRequirementsForEdgeData).length > 0 || Object.keys(currentCostsForEdgeData).length > 0) {
+            edgeStrokeColor = edgeStrokeColor === '#999' ? '#555' : edgeStrokeColor;
+            strokeWidth = Math.max(strokeWidth, 2);
+          }
+
+          edges.push({
+            id: `e${chapterNodeId}-${targetChapterId}-${choice.id}`,
+            source: chapterNodeId,
+            target: targetChapterId,
+            label: finalEdgeLabel,
+            type: 'smoothstep',
+            markerEnd: { type: MarkerType.ArrowClosed },
+            style: { stroke: edgeStrokeColor, strokeWidth: strokeWidth },
+            data: {
+              label: choice.text,
+              probability: target.probability,
+              requirements: Object.keys(currentRequirementsForEdgeData).length > 0 ? currentRequirementsForEdgeData : undefined,
+              costs: Object.keys(currentCostsForEdgeData).length > 0 ? currentCostsForEdgeData : undefined,
+            } as StoryEdgeData,
+          });
         });
-        // --- Fim do Passo Final ---
+      });
+    });
 
-        return getLayoutedElements(nodes, edges);
+    // Passo Final: Atualizar nós com recursos de entrada agregados
+    nodes.forEach(node => {
+      const chapterId = node.id; // ID já é string aqui
+      if (incomingResourcesMap.has(chapterId)) {
+        node.data.incomingChoiceResources = incomingResourcesMap.get(chapterId);
+      }
+    });
 
-    }, [chapters]); // Dependência em chapters
+    return getLayoutedElements(nodes, edges);
 
-    const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-    const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  }, [chapters]);
 
-    const onConnect = useCallback((params: Connection | Edge) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-    const nodeTypes = useMemo(() => ({
-        customNode: CustomChapterNode,
-    }), []);
+  // Adicionar o onNodeClick para interação
+  const onNodeClickCallback = useCallback((event: React.MouseEvent, node: any) => {
+    if (onNodeClick) {
+      onNodeClick(node.id); // Passa o ID do capítulo clicado
+    }
+  }, [onNodeClick]);
+
+  const onConnect = useCallback((params: Connection | Edge) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
+
+  const nodeTypes = useMemo(() => ({
+    customNode: CustomChapterNode,
+  }), []);
 
 
-    return (
-        <div style={{ width: '100%', height: '700px', border: '1px solid #ccc' }}>
-            <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
-                fitView
-                attributionPosition="bottom-left"
-                nodeTypes={nodeTypes}
-            >
-                <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-                <MiniMap />
-                <Controls />
-            </ReactFlow>
-        </div>
-    );
+  return (
+    <div style={{ width: '100%', height: '700px', border: '1px solid #ccc' }}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onNodeClick={onNodeClickCallback} // <--- ADICIONADO: Prop para lidar com o clique no nó
+        fitView
+        attributionPosition="bottom-left"
+        nodeTypes={nodeTypes}
+      >
+        <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+        <MiniMap />
+        <Controls />
+      </ReactFlow>
+    </div>
+  );
 };
 
 export default StoryMindMap;

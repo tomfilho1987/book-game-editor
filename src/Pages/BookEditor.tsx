@@ -87,6 +87,7 @@ const BookEditor: React.FC = () => {
   const currentChapterIndex = chapters.findIndex(ch => ch.id === selectedChapter?.id);
   const currentChapter = currentChapterIndex !== -1 ? chapters[currentChapterIndex] : null;
   const currentChoice = currentChapter?.choices[currentChoiceIndex];
+  const isDevelopment = process.env.NODE_ENV === 'development';
 
   type RecursoOption = { key: string; label: string; };
 
@@ -580,7 +581,7 @@ const BookEditor: React.FC = () => {
     }
     setDeleteChoiceDialog({ ...deleteChoiceDialog, open: false, param: 0 });
   };
-
+  
   const handleOpenMindMap = () => setOpenMindMapModal(true);
   const handleCloseMindMap = () => setOpenMindMapModal(false);
   const onStartItems = ensureOnStartItems(selectedChapter?.on_start);
@@ -634,10 +635,14 @@ const BookEditor: React.FC = () => {
                   Carregar
                 </Button>
               </label>
-              <Divider sx={{ my: 2 }} />
-              <Button variant="outlined" onClick={handleOpenMindMap} fullWidth style={{ display: !(chapters.length > 0) ? "none" : "block" }} >
-                Mostrar Mapa Mental
-              </Button>
+              {isDevelopment && (
+                <>
+                  <Divider sx={{ my: 2 }} />
+                  <Button variant="outlined" onClick={handleOpenMindMap} fullWidth style={{ display: !(chapters.length > 0) ? "none" : "block" }} >
+                    Mostrar Mapa Mental
+                  </Button>
+                </>
+              )}
             </Box>
           </Box>
         </Grid2>
