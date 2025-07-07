@@ -87,10 +87,8 @@ const BookEditor: React.FC = () => {
   const currentChapterIndex = chapters.findIndex(ch => ch.id === selectedChapter?.id);
   const currentChapter = currentChapterIndex !== -1 ? chapters[currentChapterIndex] : null;
   const currentChoice = currentChapter?.choices[currentChoiceIndex];
-  const isDevelopment = process.env.NODE_ENV === 'development';
 
   type RecursoOption = { key: string; label: string; };
-
   
   /**
    * @function handleChapterChange
@@ -635,14 +633,10 @@ const BookEditor: React.FC = () => {
                   Carregar
                 </Button>
               </label>
-              {isDevelopment && (
-                <>
-                  <Divider sx={{ my: 2 }} />
-                  <Button variant="outlined" onClick={handleOpenMindMap} fullWidth style={{ display: !(chapters.length > 0) ? "none" : "block" }} >
-                    Mostrar Mapa Mental
-                  </Button>
-                </>
-              )}
+              <Divider sx={{ my: 2 }} />
+              <Button variant="outlined" onClick={handleOpenMindMap} fullWidth style={{ display: !(chapters.length > 0) ? "none" : "block" }} >
+                Mostrar Mapa Mental
+              </Button>
             </Box>
           </Box>
         </Grid2>
